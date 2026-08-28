@@ -25,6 +25,7 @@ type Game struct {
 }
 
 func NewGame() *Game {
+	assets.InitAudio()
 	g := &Game{timeOfDay: 12.0} // Start at noon
 	g.Reset()
 	return g
@@ -291,6 +292,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 					used = true
 				} else if t == "weapon" {
 					player.WeaponEquipped = true
+					player.WeaponDurability = 5
 					used = true
 				}
 				
@@ -323,22 +325,46 @@ func (s *UpdateSystem) processInputAndCombat() {
 			if player.AttackCooldown > 0 {
 				player.AttackCooldown--
 			}
-			if ebiten.IsKeyPressed(ebiten.KeySpace) && player.WeaponEquipped && player.AttackCooldown <= 0 {
+			if ebiten.IsKeyPressed(ebiten.KeySpace) && player.AttackCooldown <= 0 {
 				player.AttackCooldown = 30 // Half second cooldown
 
 				attackX := pos.X + player.FacingX*24
 				attackY := pos.Y + player.FacingY*24
 				
+				hitZombies := false
 				zQuery := s.zombieFilter.Query()
 				for zQuery.Next() {
-					_, zPos, _ := zQuery.Get()
+					z, zPos, zVel := zQuery.Get()
 					ent := zQuery.Entity()
 					
 					dx := attackX - zPos.X
 					dy := attackY - zPos.Y
 					if math.Sqrt(dx*dx + dy*dy) < 24.0 { // Hit radius
-						toRemoveZombies = append(toRemoveZombies, ent)
+						hitZombies = true
+						if player.WeaponEquipped {
+							toRemoveZombies = append(toRemoveZombies, ent)
+						} else {
+							// Shove!
+							z.StunTimer = 45
+							zVel.X = player.FacingX * 5.0
+							zVel.Y = player.FacingY * 5.0
+						}
 					}
+				}
+				
+				if player.WeaponEquipped {
+					if hitZombies {
+						assets.PlaySound(assets.HitSound)
+						player.WeaponDurability--
+						if player.WeaponDurability <= 0 {
+							player.WeaponEquipped = false
+						}
+					} else {
+						// Swoosh sound? Just play shove sound for now
+						assets.PlaySound(assets.ShoveSound)
+					}
+				} else {
+					assets.PlaySound(assets.ShoveSound)
 				}
 			}
 		}
@@ -404,6 +430,13 @@ func (s *UpdateSystem) processZombies() {
 		
 		var moveX, moveY float64
 		
+		if zombie.StunTimer > 0 {
+			zombie.StunTimer--
+			vel.X *= 0.85 // Apply friction to the shove pushback
+			vel.Y *= 0.85
+			continue // Skip standard AI logic while stunned
+		}
+
 		// Infection Check
 		if dist < 14.0 && !playerDead {
 			pMap := arkecs.NewMap1[ecs.Player](s.world)
@@ -505,6 +538,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var hasWeapon bool
 	var attackCooldown int
 	
+	var playerDurability int
+	
 	pq := arkecs.NewFilter2[ecs.Player, ecs.Position](s.world).Query()
 	for pq.Next() {
 		p, pPos := pq.Get()
@@ -517,6 +552,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		playerInventory = p.Inventory
 		hasWeapon = p.WeaponEquipped
 		attackCooldown = p.AttackCooldown
+		playerDurability = p.WeaponDurability
 		
 		isoX, isoY := WorldToIso(pPos.X, pPos.Y)
 		camX = isoX - 400
@@ -715,6 +751,10 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			} else {
 				img = assets.ZombieImage
 			}
+			// Stun tint
+			if z.StunTimer > 0 {
+				op.ColorScale.Scale(1.5, 1.5, 2.5, 1) // Bluish flash when stunned
+			}
 		}
 
 		sprites = append(sprites, Renderable{
@@ -762,9 +802,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	ebitenutil.DebugPrintAt(screen, "Thirst", 15, 55)
 
 	if hasWeapon {
-		ebitenutil.DebugPrintAt(screen, "Weapon: EQUIPPED (Press SPACE to attack)", 10, 75)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE to attack)", playerDurability), 10, 75)
 	} else {
-		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Find a weapon on the map!)", 10, 75)
+		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Press SPACE to shove zombies back)", 10, 75)
 	}
 
 	// Inventory UI

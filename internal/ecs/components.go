@@ -31,12 +31,13 @@ type Player struct {
 	Hunger         float64 // 100.0 is full, 0.0 is starving
 	Thirst         float64 // 100.0 is hydrated, 0.0 is dehydrated
 	Inventory      []string
-	WeaponEquipped bool
-	AttackCooldown int
-	Dead           bool
-	Infected       bool
-	FacingX        float64
-	FacingY        float64
+	WeaponEquipped   bool
+	WeaponDurability int
+	AttackCooldown   int
+	Dead             bool
+	Infected         bool
+	FacingX          float64
+	FacingY          float64
 }
 
 // Item marker component
@@ -52,4 +53,5 @@ type Zombie struct{
 	WanderTimer int
 	WanderDirX  float64
 	WanderDirY  float64
+	StunTimer   int
 }
