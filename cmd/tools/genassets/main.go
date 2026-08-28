@@ -6,7 +6,7 @@ import (
 	"image/png"
 	"log"
 	"math"
-	"math/rand"
+	
 	"os"
 )
 
@@ -202,256 +202,146 @@ func saveImg(name string, img *image.RGBA) {
 
 func generatePlayer(name string) {
 	img := image.NewRGBA(image.Rect(0, 0, 16, 32))
+	
+	// Vector style character
+	skin := color.RGBA{255, 204, 153, 255}
+	shirt := color.RGBA{102, 204, 255, 255}
+	pants := color.RGBA{102, 102, 153, 255}
+	shadow := color.RGBA{0, 0, 0, 40}
 
-	skinLight := color.RGBA{245, 199, 161, 255}
-	skinBase := color.RGBA{224, 169, 122, 255}
-	skinShadow := color.RGBA{184, 123, 82, 255}
-
-	hairLight := color.RGBA{110, 71, 42, 255}
-	hairBase := color.RGBA{74, 46, 24, 255}
-	hairDark := color.RGBA{43, 23, 10, 255}
-
-	shirtLight := color.RGBA{66, 146, 184, 255}
-	shirtBase := color.RGBA{42, 111, 143, 255}
-	shirtDark := color.RGBA{24, 78, 104, 255}
-	shirtSeam := color.RGBA{20, 56, 74, 255}
-
-	beltLeather := color.RGBA{61, 35, 20, 255}
-	beltBuckle := color.RGBA{229, 184, 52, 255}
-
-	pantsLight := color.RGBA{75, 101, 132, 255}
-	pantsBase := color.RGBA{52, 73, 94, 255}
-	pantsDark := color.RGBA{36, 51, 66, 255}
-
-	bootLight := color.RGBA{92, 62, 38, 255}
-	bootBase := color.RGBA{59, 40, 24, 255}
-	bootSole := color.RGBA{21, 21, 21, 255}
-
-	eyeWhite := color.RGBA{240, 240, 240, 255}
-	eyePupil := color.RGBA{30, 63, 102, 255}
-
-	shadowGround := color.RGBA{0, 0, 0, 80}
-
-	palette := map[rune]color.RGBA{
-		'h': hairLight,
-		'H': hairBase,
-		'd': hairDark,
-		'k': skinLight,
-		'K': skinBase,
-		's': skinShadow,
-		'e': eyeWhite,
-		'E': eyePupil,
-		't': shirtLight,
-		'T': shirtBase,
-		'r': shirtDark,
-		'c': shirtSeam,
-		'B': beltLeather,
-		'G': beltBuckle,
-		'p': pantsLight,
-		'P': pantsBase,
-		'q': pantsDark,
-		'f': bootLight,
-		'F': bootBase,
-		'O': bootSole,
-		'S': shadowGround,
+	// Shadow
+	for y := 28; y < 32; y++ {
+		for x := 2; x < 14; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 30)
+			if (dx*dx)/16.0 + (dy*dy)/4.0 <= 1.0 {
+				setPixel(img, x, y, shadow)
+			}
+		}
 	}
 
-	rows := []string{
-		"................",
-		".....hhhh.......",
-		"....hhHHHd......",
-		"....hhHHHd......",
-		"....kkKKKs......",
-		"....kkKKKs......",
-		".....kKKs.......",
-		"......Ks........",
-		"...ttTTTTrr.....",
-		"..ttTTTTTTrr....",
-		"..ttTTTTTTrr....",
-		"..ttTTTTTTrr....",
-		"..ttTTTTTTrr....",
-		"..kkTTTTTTrs....",
-		"..kkTTTTTTrs....",
-		"....BBGBB.......",
-		"....ppPPPq......",
-		"....ppPPPq......",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....pPq.pPq.....",
-		"....fFq.fFq.....",
-		"....fFq.fFq.....",
-		"...ffFq.ffFq....",
-		"...OOOq.OOOq....",
-		"................",
-		"....SSSSSSSS....",
-	}
+	// Pants (capsule lower)
+	fillRect(img, 5, 20, 6, 8, pants)
 
-	drawMatrix(img, 0, 0, rows, palette)
+	// Shirt (capsule upper)
+	fillRect(img, 4, 12, 8, 8, shirt)
+	// Sleeves
+	fillRect(img, 2, 12, 2, 5, shirt)
+	fillRect(img, 12, 12, 2, 5, shirt)
+
+	// Head (circle)
+	for y := 2; y < 12; y++ {
+		for x := 3; x < 13; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 7)
+			if dx*dx + dy*dy <= 20 {
+				setPixel(img, x, y, skin)
+			}
+		}
+	}
+    
+    // Eyes
+    setPixel(img, 6, 6, color.RGBA{0, 0, 0, 255})
+    setPixel(img, 10, 6, color.RGBA{0, 0, 0, 255})
+
 	saveImg(name, img)
 }
+
 
 func generateZombie(name string) {
 	img := image.NewRGBA(image.Rect(0, 0, 16, 32))
+	
+	// Vector style zombie
+	skin := color.RGBA{153, 204, 153, 255}
+	shirt := color.RGBA{153, 102, 102, 255}
+	pants := color.RGBA{102, 102, 102, 255}
+	shadow := color.RGBA{0, 0, 0, 40}
 
-	fleshLight := color.RGBA{124, 156, 116, 255}
-	fleshBase := color.RGBA{94, 122, 88, 255}
-	fleshDark := color.RGBA{62, 86, 58, 255}
-
-	bloodLight := color.RGBA{160, 20, 20, 255}
-	bloodBase := color.RGBA{120, 20, 20, 255}
-	bloodDark := color.RGBA{60, 8, 8, 255}
-
-	boneWhite := color.RGBA{221, 216, 196, 255}
-
-	eyeYellow := color.RGBA{226, 232, 116, 255}
-	mouthDark := color.RGBA{26, 10, 10, 255}
-
-	hairDark := color.RGBA{37, 37, 37, 255}
-
-	shirtRagLight := color.RGBA{125, 117, 101, 255}
-	shirtRagBase := color.RGBA{85, 78, 65, 255}
-	shirtRagDark := color.RGBA{45, 40, 32, 255}
-
-	pantsRagBase := color.RGBA{61, 66, 73, 255}
-	pantsRagDark := color.RGBA{34, 37, 42, 255}
-
-	bootBase := color.RGBA{43, 35, 29, 255}
-	shadowGround := color.RGBA{0, 0, 0, 80}
-
-	palette := map[rune]color.RGBA{
-		'h': hairDark,
-		'z': fleshLight,
-		'Z': fleshBase,
-		'x': fleshDark,
-		'b': bloodLight,
-		'B': bloodBase,
-		'd': bloodDark,
-		'W': boneWhite,
-		'Y': eyeYellow,
-		'M': mouthDark,
-		't': shirtRagLight,
-		'T': shirtRagBase,
-		'r': shirtRagDark,
-		'P': pantsRagBase,
-		'q': pantsRagDark,
-		'F': bootBase,
-		'S': shadowGround,
+	// Shadow
+	for y := 28; y < 32; y++ {
+		for x := 2; x < 14; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 30)
+			if (dx*dx)/16.0 + (dy*dy)/4.0 <= 1.0 {
+				setPixel(img, x, y, shadow)
+			}
+		}
 	}
 
-	rows := []string{
-		"................",
-		"......hhh.......",
-		".....zzZZx......",
-		".....zzZZx......",
-		".....zzZZx......",
-		".....zzZZx......",
-		"......zZx.......",
-		".......Zx.......",
-		"....ttTTTrr.....",
-		"..zZttTTTrrZ....",
-		"..zZttTTTrrZ....",
-		"..xZttTTTrrZ....",
-		"..xZttTTTrrZ....",
-		"....TT.TTrr.....",
-		".......TTr......",
-		"....PPPPPqq.....",
-		"....PPPPPqq.....",
-		"....PPq.Pqq.....",
-		"....PPq.Pqq.....",
-		"....PPq.Pqq.....",
-		"....PPq.Bqq.....",
-		"....PPq.zBz.....",
-		"....PPq.ZZx.....",
-		"....PPq.ZZx.....",
-		"....PPq.ZZx.....",
-		"....PPq.ZZx.....",
-		"....FFq.ZZx.....",
-		"....FFq.ZZx.....",
-		"...FFFq.ZZZx....",
-		"...FFFq.BdBB....",
-		"................",
-		"....SSSSSSSS....",
-	}
+	// Pants
+	fillRect(img, 5, 20, 6, 8, pants)
 
-	drawMatrix(img, 0, 0, rows, palette)
+	// Shirt
+	fillRect(img, 4, 12, 8, 8, shirt)
+	// Arms extended forward (zombie pose)
+	fillRect(img, 1, 14, 3, 2, skin)
+	fillRect(img, 12, 14, 3, 2, skin)
+
+	// Head (circle)
+	for y := 2; y < 12; y++ {
+		for x := 3; x < 13; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 7)
+			if dx*dx + dy*dy <= 20 {
+				setPixel(img, x, y, skin)
+			}
+		}
+	}
+    
+    // Eyes
+    setPixel(img, 6, 6, color.RGBA{255, 0, 0, 255})
+    setPixel(img, 10, 6, color.RGBA{255, 0, 0, 255})
+
 	saveImg(name, img)
 }
+
 
 func generateRunner(name string) {
 	img := image.NewRGBA(image.Rect(0, 0, 16, 32))
+	
+	skin := color.RGBA{255, 102, 102, 255}
+	shadow := color.RGBA{0, 0, 0, 40}
 
-	boneWhite := color.RGBA{216, 208, 192, 255}
-	muscleHighlight := color.RGBA{255, 77, 77, 255}
-	muscleArterial := color.RGBA{200, 40, 40, 255}
-	muscleBase := color.RGBA{150, 28, 28, 255}
-	muscleDark := color.RGBA{82, 10, 10, 255}
-	muscleCrevice := color.RGBA{43, 5, 5, 255}
-
-	eyeCore := color.RGBA{255, 158, 27, 255}
-	eyeGlow := color.RGBA{255, 21, 21, 255}
-
-	clawBlack := color.RGBA{26, 5, 5, 255}
-	clawTip := color.RGBA{140, 32, 32, 255}
-
-	shadowGround := color.RGBA{0, 0, 0, 80}
-
-	palette := map[rune]color.RGBA{
-		'W': boneWhite,
-		'm': muscleHighlight,
-		'a': muscleArterial,
-		'M': muscleBase,
-		'd': muscleDark,
-		'D': muscleCrevice,
-		'Y': eyeCore,
-		'E': eyeGlow,
-		'C': clawBlack,
-		'c': clawTip,
-		'S': shadowGround,
+	// Shadow
+	for y := 28; y < 32; y++ {
+		for x := 2; x < 14; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 30)
+			if (dx*dx)/16.0 + (dy*dy)/4.0 <= 1.0 {
+				setPixel(img, x, y, shadow)
+			}
+		}
 	}
 
-	rows := []string{
-		"................",
-		"................",
-		"......WWWW......",
-		".....WWWWWW.....",
-		".....mmMMMd.....",
-		".....mmMMMd.....",
-		".....mMMMMd.....",
-		"....mmMMMMMd....",
-		"...mmmMMMMMdd...",
-		"..mmmmMMMMMMd...",
-		"..mmmmMMMMMMd...",
-		"cMmmmmMMMMMMdMc",
-		"CMmmmmMMMMMMdMC",
-		".CMmmmMMMMMMdC.",
-		"..DmmmMMMMMMdD.",
-		"..DDmm...mmDD...",
-		"..Dmm.....mmD...",
-		".Dmmm.....mmmD..",
-		".Dmmm.....mmmD..",
-		".Dmmm.....mmmD..",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..Dmm.....mmD...",
-		"..cCC.....CCd...",
-		"..CCC.....CCC...",
-		"..CCC.....CCC...",
-		"................",
-		"...SSSSSSSSSS...",
+	// Body leaning forward
+	for y := 14; y < 24; y++ {
+		for x := 3; x < 13; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 19)
+			if (dx*dx)/16.0 + (dy*dy)/25.0 <= 1.0 {
+				setPixel(img, x, y, skin)
+			}
+		}
 	}
 
-	drawMatrix(img, 0, 0, rows, palette)
+	// Head
+	for y := 6; y < 14; y++ {
+		for x := 4; x < 12; x++ {
+			dx := float64(x - 8)
+			dy := float64(y - 10)
+			if dx*dx + dy*dy <= 12 {
+				setPixel(img, x, y, skin)
+			}
+		}
+	}
+    
+    // Eyes glowing
+    setPixel(img, 7, 9, color.RGBA{255, 255, 0, 255})
+    setPixel(img, 11, 9, color.RGBA{255, 255, 0, 255})
+
 	saveImg(name, img)
 }
+
 
 // -------------------------------------------------------------
 // 2. FLOOR TILES (64x32)
@@ -460,13 +350,14 @@ func generateRunner(name string) {
 func generateGrass(name string) {
 	w, h := 64, 32
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	rng := rand.New(rand.NewSource(42))
-
-	baseDark := color.RGBA{38, 77, 36, 255}
-	baseMid := color.RGBA{48, 98, 45, 255}
-	baseLight := color.RGBA{68, 128, 55, 255}
-	soilDark := color.RGBA{24, 50, 22, 255}
-	flowerColor := color.RGBA{225, 210, 110, 255}
+	
+	// Pastel vibrant vector colors
+	topColor := color.RGBA{113, 225, 157, 255}
+	leftColor := color.RGBA{74, 184, 131, 255}
+	rightColor := color.RGBA{54, 150, 103, 255}
+    flowerWhite := color.RGBA{255, 255, 255, 255}
+    flowerYellow := color.RGBA{255, 220, 100, 255}
+    chevronColor := color.RGBA{154, 238, 181, 255}
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -474,16 +365,15 @@ func generateGrass(name string) {
 			dy := float64(y) - 15.5
 			isoDist := math.Abs(dx)/32.0 + math.Abs(dy)/16.0
 			if isoDist <= 1.0 {
-				c := baseMid
+				c := topColor
 
-				// 3D Extrusion - Stepped toon-shading
-				if isoDist > 0.90 {
+				// Create a thick, wavy rim to simulate depth in a minimalist style
+				rimThickness := 0.15 + 0.05*math.Sin(float64(x)*0.3)
+				if isoDist > 1.0 - rimThickness {
 					if x < 32 {
-						// Left face - lighter dirt
-						c = baseDark
+						c = leftColor
 					} else {
-						// Right face - darker dirt
-						c = soilDark
+						c = rightColor
 					}
 				}
 
@@ -492,46 +382,50 @@ func generateGrass(name string) {
 		}
 	}
 
-	// Grass Blades - Distinct geometric V-shapes (chevrons)
-	for i := 0; i < 20; i++ {
-		bx := 8 + rng.Intn(48)
-		by := 6 + rng.Intn(20)
-		dx := float64(bx) - 31.5
-		dy := float64(by) - 15.5
-		if math.Abs(dx)/32.0+math.Abs(dy)/16.0 <= 0.85 {
-			setPixel(img, bx, by, baseLight)
-			setPixel(img, bx-1, by-1, baseLight)
-			setPixel(img, bx+1, by-1, baseLight)
-		}
+	// Grass Blades - Clean, large vector-style chevrons
+	chevrons := [][2]int{{16, 12}, {40, 8}, {24, 20}, {48, 16}}
+	for _, pos := range chevrons {
+        cx, cy := pos[0], pos[1]
+        // Draw a thick 'V'
+        setPixel(img, cx, cy, chevronColor)
+        setPixel(img, cx-1, cy-1, chevronColor)
+        setPixel(img, cx-2, cy-2, chevronColor)
+        setPixel(img, cx+1, cy-1, chevronColor)
+        setPixel(img, cx+2, cy-2, chevronColor)
+        // Make it thicker
+        setPixel(img, cx, cy+1, chevronColor)
+        setPixel(img, cx-1, cy, chevronColor)
+        setPixel(img, cx+1, cy, chevronColor)
 	}
 
-	// Wildflower Accents - Distinct Plus Shapes
-	for i := 0; i < 4; i++ {
-		fx := 10 + rng.Intn(44)
-		fy := 6 + rng.Intn(20)
-		dx := float64(fx) - 31.5
-		dy := float64(fy) - 15.5
-		if math.Abs(dx)/32.0+math.Abs(dy)/16.0 <= 0.75 {
-			setPixel(img, fx, fy, flowerColor)
-			setPixel(img, fx-1, fy, flowerColor)
-			setPixel(img, fx+1, fy, flowerColor)
-			setPixel(img, fx, fy-1, flowerColor)
-			setPixel(img, fx, fy+1, flowerColor)
-		}
+	// Wildflower Accents - Large clean Plus Shapes with yellow center
+	flowers := [][2]int{{24, 8}, {40, 20}, {12, 18}}
+	for _, pos := range flowers {
+        fx, fy := pos[0], pos[1]
+        setPixel(img, fx, fy, flowerYellow)
+        // Petals
+        setPixel(img, fx-1, fy, flowerWhite)
+        setPixel(img, fx-2, fy, flowerWhite)
+        setPixel(img, fx+1, fy, flowerWhite)
+        setPixel(img, fx+2, fy, flowerWhite)
+        setPixel(img, fx, fy-1, flowerWhite)
+        setPixel(img, fx, fy-2, flowerWhite)
+        setPixel(img, fx, fy+1, flowerWhite)
+        setPixel(img, fx, fy+2, flowerWhite)
 	}
 
 	saveImg(name, img)
 }
+
 
 func generateDirt(name string) {
 	w, h := 64, 32
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	rng := rand.New(rand.NewSource(101))
-
-	baseDark := color.RGBA{68, 46, 32, 255}
-	baseMid := color.RGBA{92, 64, 45, 255}
-	pebbleHigh := color.RGBA{165, 160, 150, 255}
-	pebbleShadow := color.RGBA{40, 28, 20, 255}
+	
+	topColor := color.RGBA{151, 103, 81, 255}
+	leftColor := color.RGBA{122, 79, 59, 255}
+	rightColor := color.RGBA{94, 60, 44, 255}
+    pebbleLight := color.RGBA{200, 160, 140, 255}
 
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -539,15 +433,14 @@ func generateDirt(name string) {
 			dy := float64(y) - 15.5
 			isoDist := math.Abs(dx)/32.0 + math.Abs(dy)/16.0
 			if isoDist <= 1.0 {
-				c := baseMid
+				c := topColor
 
-				if isoDist > 0.90 {
+				rimThickness := 0.15 + 0.05*math.Sin(float64(x)*0.3)
+				if isoDist > 1.0 - rimThickness {
 					if x < 32 {
-						// Left face - lighter dirt
-						c = baseDark
+						c = leftColor
 					} else {
-						// Right face - darker dirt
-						c = darken(baseDark, 0.75)
+						c = rightColor
 					}
 				}
 
@@ -556,23 +449,16 @@ func generateDirt(name string) {
 		}
 	}
 
-	// Pebbles
-	for i := 0; i < 10; i++ {
-		px := 8 + rng.Intn(48)
-		py := 4 + rng.Intn(24)
-		dx := float64(px) - 31.5
-		dy := float64(py) - 15.5
-		if math.Abs(dx)/32.0+math.Abs(dy)/16.0 <= 0.80 {
-			// Clean flat rectangles
-			setPixel(img, px, py, pebbleHigh)
-			setPixel(img, px+1, py, pebbleHigh)
-			setPixel(img, px, py+1, pebbleShadow)
-			setPixel(img, px+1, py+1, pebbleShadow)
-		}
+	// Large distinct pebbles
+	pebbles := [][2]int{{20, 10}, {45, 14}, {30, 22}, {15, 20}}
+	for _, pos := range pebbles {
+        px, py := pos[0], pos[1]
+        fillRect(img, px, py, 3, 2, pebbleLight)
 	}
 
 	saveImg(name, img)
 }
+
 
 func generateWoodFloor(name string) {
 	w, h := 64, 32
@@ -814,76 +700,29 @@ func generateTileFloor(name string) {
 func generateIsoWall(name string) {
 	w, h := 64, 64
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	copingTop := color.RGBA{185, 180, 175, 255}
-	copingHigh := color.RGBA{220, 215, 210, 255}
-	copingShadow := color.RGBA{115, 110, 105, 255}
+	
+    // Clean minimalist vector wall
+	topColor := color.RGBA{220, 215, 210, 255}
+	leftColor := color.RGBA{148, 56, 42, 255}
+	rightColor := color.RGBA{115, 40, 28, 255}
 
-	brickBaseRed := color.RGBA{148, 56, 42, 255}
-	brickDarkRed := color.RGBA{115, 40, 28, 255}
-	brickLightRed := color.RGBA{175, 75, 55, 255}
-
-	mortarLeft := color.RGBA{190, 185, 175, 255}
-	mortarRight := color.RGBA{110, 105, 100, 255}
-
-	// 1. Top Coping Stone
+	// 1. Top Surface (thick coping)
 	for y := 0; y < 28; y++ {
 		for x := 0; x < w; x++ {
 			dx := float64(x) - 31.5
 			dy := float64(y) - 13.5
-			isoDist := math.Abs(dx)/32.0 + math.Abs(dy)/14.0
-			if isoDist <= 1.0 {
-				c := copingTop
-				if isoDist > 0.88 {
-					if y < 14 {
-						c = copingHigh
-					} else {
-						c = copingShadow
-					}
-				}
-				setPixel(img, x, y, c)
+			if math.Abs(dx)/32.0 + math.Abs(dy)/14.0 <= 1.0 {
+				setPixel(img, x, y, topColor)
 			}
 		}
-	}
-
-	for x := 0; x < 32; x++ {
-		edgeY := int(math.Round(14.0 + float64(x)*0.5))
-		setPixel(img, x, edgeY+1, copingShadow)
-	}
-	for x := 32; x < 64; x++ {
-		edgeY := int(math.Round(30.0 - float64(x-32)*0.5))
-		setPixel(img, x, edgeY+1, darken(copingShadow, 0.8))
 	}
 
 	// 2. Left Face (West Wall)
 	for x := 0; x < 32; x++ {
 		topY := 15 + x/2
 		botY := 47 + x/2
-		for y := topY + 1; y <= botY && y < h; y++ {
-			hRel := y - topY
-			course := hRel / 4
-			courseY := hRel % 4
-
-			if courseY == 0 {
-				setPixel(img, x, y, mortarLeft)
-			} else {
-				jointOffset := 0
-				if course%2 == 1 {
-					jointOffset = 4
-				}
-				if (x+jointOffset)%8 == 0 {
-					setPixel(img, x, y, mortarLeft)
-				} else {
-					brickSeed := (course*13 + (x+jointOffset)/8*7) % 5
-					c := brickBaseRed
-					if brickSeed == 1 || brickSeed == 3 {
-						c = brickLightRed
-					} else if brickSeed == 2 {
-						c = brickDarkRed
-					}
-					c = darken(c, 0.90)
-					setPixel(img, x, y, c)
-				}
-			}
+		for y := topY; y <= botY && y < h; y++ {
+			setPixel(img, x, y, leftColor)
 		}
 	}
 
@@ -891,123 +730,77 @@ func generateIsoWall(name string) {
 	for x := 32; x < 64; x++ {
 		topY := 31 - (x-32)/2
 		botY := 63 - (x-32)/2
-		for y := topY + 1; y <= botY && y < h; y++ {
-			hRel := y - topY
-			course := hRel / 4
-			courseY := hRel % 4
-
-			if courseY == 0 {
-				setPixel(img, x, y, mortarRight)
-			} else {
-				jointOffset := 0
-				if course%2 == 1 {
-					jointOffset = 4
-				}
-				if ((x-32)+jointOffset)%8 == 0 {
-					setPixel(img, x, y, mortarRight)
-				} else {
-					brickSeed := (course*17 + ((x-32)+jointOffset)/8*11) % 5
-					c := brickBaseRed
-					if brickSeed == 1 || brickSeed == 3 {
-						c = brickLightRed
-					} else if brickSeed == 2 {
-						c = brickDarkRed
-					}
-					c = darken(c, 0.65)
-					setPixel(img, x, y, c)
-				}
-			}
+		for y := topY; y <= botY && y < h; y++ {
+			setPixel(img, x, y, rightColor)
 		}
 	}
 
-	// Base contact shadow
-	for x := 0; x < 32; x++ {
-		botY := 47 + x/2
-		if botY < h {
-			setPixel(img, x, botY, color.RGBA{20, 15, 15, 255})
-		}
-	}
-	for x := 32; x < 64; x++ {
-		botY := 63 - (x-32)/2
-		if botY < h {
-			setPixel(img, x, botY, color.RGBA{15, 10, 10, 255})
-		}
-	}
+    // A clean highlight edge
+    for x := 0; x < 32; x++ {
+        topY := 15 + x/2
+        setPixel(img, x, topY, color.RGBA{240, 235, 230, 255})
+    }
+    for x := 32; x < 64; x++ {
+        topY := 31 - (x-32)/2
+        setPixel(img, x, topY, color.RGBA{180, 175, 170, 255})
+    }
 
 	saveImg(name, img)
 }
+
 
 func generateIsoTree(name string) {
 	w, h := 64, 64
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	barkDark := color.RGBA{58, 36, 20, 255}
-	barkMid := color.RGBA{88, 56, 32, 255}
-	barkLight := color.RGBA{118, 78, 46, 255}
+	
+    // Pastel vector colors matching reference 2 (smooth conical/spherical)
+	trunkColor := color.RGBA{101, 74, 57, 255}
+	leafColor := color.RGBA{74, 184, 131, 255}
+    leafShadow := color.RGBA{54, 150, 103, 255}
 
-	leafDeepShadow := color.RGBA{16, 42, 20, 255}
-	leafMid := color.RGBA{38, 98, 44, 255}
-	leafLight := color.RGBA{62, 142, 68, 255}
+    // Shadow on ground
+    for y := 50; y < 60; y++ {
+        for x := 16; x < 48; x++ {
+            dx := float64(x - 32)
+            dy := float64(y - 55)
+            if (dx*dx)/256.0 + (dy*dy)/25.0 <= 1.0 {
+                setPixel(img, x, y, color.RGBA{0, 0, 0, 40})
+            }
+        }
+    }
 
-	// 1. Trunk and Root Flares
-	for y := 42; y <= 60; y++ {
-		trunkW := 3
-		if y >= 54 {
-			trunkW = 3 + (y - 54)
-		}
-		for x := 32 - trunkW; x <= 32+trunkW; x++ {
-			if x >= 0 && x < w {
-				dx := float64(x - 32)
-				var c color.RGBA
-				if dx < -1 {
-					c = barkLight
-				} else if dx > 1 {
-					c = barkDark
-				} else {
-					c = barkMid
-				}
-				setPixel(img, x, y, c)
-			}
-		}
-	}
+	// Perfect cylinder trunk
+    fillRect(img, 28, 40, 8, 16, trunkColor)
 
-	// 2. 3-Tier Layered Foliage Domes - Overlapping circles
-	type Tier struct {
-		cY     int
-		radius float64
-	}
-	tiers := []Tier{
-		{cY: 42, radius: 20.0},
-		{cY: 26, radius: 15.0},
-		{cY: 12, radius: 10.0},
-	}
-
-	for _, tier := range tiers {
-		for y := tier.cY - int(tier.radius); y <= tier.cY+int(tier.radius); y++ {
-			for x := int(32.0 - tier.radius); x <= int(32.0+tier.radius); x++ {
-				if x < 0 || x >= w || y < 0 || y >= h {
-					continue
-				}
-				dx := float64(x - 32)
-				dy := float64(y - tier.cY)
-				if dx*dx+dy*dy <= tier.radius*tier.radius {
-					// Flat Shading
-					var c color.RGBA
-					if dx < -tier.radius*0.2 && dy < -tier.radius*0.2 {
-						c = leafLight
-					} else if dx > tier.radius*0.3 || dy > tier.radius*0.4 {
-						c = leafDeepShadow
-					} else {
-						c = leafMid
-					}
-
-					setPixel(img, x, y, c)
-				}
-			}
-		}
-	}
+	// Smooth spherical/teardrop canopy
+    // We'll draw a large perfect circle for the top canopy
+    canopyCY := 26.0
+    canopyR := 22.0
+    
+    for y := 0; y < h; y++ {
+        for x := 0; x < w; x++ {
+            dx := float64(x) - 32.0
+            dy := float64(y) - canopyCY
+            
+            // Dist for a slightly teardrop/egg shape
+            dist := math.Sqrt(dx*dx + dy*dy)
+            
+            // Modify radius based on y to make it teardrop (wider at bottom, pointy at top)
+            // or just perfect circle like reference 2 left-most tree
+            if dist <= canopyR {
+                // Vector flat shading: bottom right shadow curve
+                c := leafColor
+                if dx > canopyR*0.2 && dy > canopyR*0.2 && dist > canopyR*0.5 {
+                    c = leafShadow
+                }
+                setPixel(img, x, y, c)
+            }
+        }
+    }
 
 	saveImg(name, img)
 }
+
 
 func generateIsoFence(name string) {
 	w, h := 64, 64
