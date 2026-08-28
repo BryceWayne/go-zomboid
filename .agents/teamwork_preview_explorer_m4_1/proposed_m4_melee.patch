@@ -1,0 +1,87 @@
+diff --git a/internal/ecs/components.go b/internal/ecs/components.go
+index 1111111..2222222 100644
+--- a/internal/ecs/components.go
++++ b/internal/ecs/components.go
+@@ -34,6 +34,7 @@ type Player struct {
+ 	Inventory          []string
+ 	WeaponEquipped     bool
++	WeaponType         string
+ 	WeaponDurability   int
+ 	ArmorEquipped      bool
+ 	ArmorType          string
+diff --git a/internal/game/game.go b/internal/game/game.go
+index 3333333..4444444 100644
+--- a/internal/game/game.go
++++ b/internal/game/game.go
+@@ -301,6 +301,11 @@ func (s *UpdateSystem) processInputAndCombat() {
+ 				} else if t == "weapon" {
+ 					player.WeaponEquipped = true
++					player.WeaponType = "weapon"
+ 					player.WeaponDurability = 5
+ 					used = true
++				} else if t == "axe" {
++					player.WeaponEquipped = true
++					player.WeaponType = "axe"
++					player.WeaponDurability = 12
++					used = true
+ 				} else if t == "armor" || t == "vest" {
+ 					player.ArmorEquipped = true
+ 					player.ArmorType = "vest"
+@@ -348,6 +353,12 @@ func (s *UpdateSystem) processInputAndCombat() {
+ 				player.AttackCooldown = 30 // Half second cooldown
+ 
+-				attackX := pos.X + player.FacingX*24
+-				attackY := pos.Y + player.FacingY*24
++				reach := 24.0
++				hitRadius := 24.0
++				if player.WeaponEquipped && player.WeaponType == "axe" {
++					reach = 32.0
++					hitRadius = 32.0
++				}
++				attackX := pos.X + player.FacingX*reach
++				attackY := pos.Y + player.FacingY*reach
+ 				
+ 				hitZombies := false
+ 				zQuery := s.zombieFilter.Query()
+@@ -359,5 +370,5 @@ func (s *UpdateSystem) processInputAndCombat() {
+ 					dx := attackX - zPos.X
+ 					dy := attackY - zPos.Y
+-					if math.Sqrt(dx*dx + dy*dy) < 24.0 { // Hit radius
++					if math.Sqrt(dx*dx + dy*dy) < hitRadius {
+ 						hitZombies = true
+ 						if player.WeaponEquipped {
+@@ -377,5 +388,6 @@ func (s *UpdateSystem) processInputAndCombat() {
+ 						player.WeaponDurability--
+ 						if player.WeaponDurability <= 0 {
+ 							player.WeaponEquipped = false
++							player.WeaponType = ""
+ 						}
+ 					} else {
+@@ -580,2 +592,3 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 	var hasWeapon bool
++	var playerWeaponType string
+ 	var attackCooldown int
+@@ -601,2 +614,3 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 		hasWeapon = p.WeaponEquipped
++		playerWeaponType = p.WeaponType
+ 		attackCooldown = p.AttackCooldown
+@@ -861,2 +875,4 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 		if hasWeapon {
+-			op.ColorScale.Scale(1, 0, 0, 0.7) // Red if weapon
++			if playerWeaponType == "axe" {
++				op.ColorScale.Scale(1, 0.2, 0.2, 0.8) // Fire axe indicator
++			} else {
++				op.ColorScale.Scale(1, 0, 0, 0.7) // Red if weapon
++			}
+ 		} else {
+@@ -935,2 +951,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 	if hasWeapon {
+-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE/X to attack)", playerDurability), 10, 95)
++		weaponName := "WEAPON"
++		if playerWeaponType == "axe" {
++			weaponName = "FIRE AXE"
++		} else if playerWeaponType == "weapon" {
++			weaponName = "SPIKED BAT"
++		}
++		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: %s (Durability: %d) (Press SPACE/X to attack)", weaponName, playerDurability), 10, 95)
+ 	} else {

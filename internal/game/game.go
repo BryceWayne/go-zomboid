@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 
 	"github.com/BryceWayne/go-zomboid/internal/assets"
 	"github.com/BryceWayne/go-zomboid/internal/ecs"
@@ -41,9 +42,9 @@ func (g *Game) Reset() {
 	zombieMap := arkecs.NewMap5[ecs.Zombie, ecs.Position, ecs.Velocity, ecs.Sprite, ecs.Collider](w)
 	itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](w)
 
-	// Create Player in center of map
-	playerStartX := 50.0 * float64(world.TileSize)
-	playerStartY := 50.0 * float64(world.TileSize)
+	// Create Player at safe designated residential spawn
+	playerStartX := gameMap.PlayerSpawn.X
+	playerStartY := gameMap.PlayerSpawn.Y
 
 	playerMap.NewEntity(
 		&ecs.Player{
@@ -64,36 +65,20 @@ func (g *Game) Reset() {
 		&ecs.Collider{Width: 16, Height: 16},
 	)
 
-	// Guaranteed starting items near player (edge of fog of war is ~250px)
-	itemMap.NewEntity(&ecs.Item{Type: "weapon"}, &ecs.Position{X: playerStartX - 200, Y: playerStartY})
-	itemMap.NewEntity(&ecs.Item{Type: "food"}, &ecs.Position{X: playerStartX + 180, Y: playerStartY + 100})
-	itemMap.NewEntity(&ecs.Item{Type: "water"}, &ecs.Position{X: playerStartX + 200, Y: playerStartY - 50})
-
-	// Create Items on map
-	itemTypes := []string{"weapon", "weapon", "weapon", "weapon", "weapon", "food", "food", "food", "food", "food", "food", "food", "food", "water", "water", "water", "water", "water", "water", "water"}
-	for _, t := range itemTypes {
+	// Spawn contextual loot items from map
+	for _, loot := range gameMap.LootSpawns {
 		itemMap.NewEntity(
-			&ecs.Item{Type: t},
-			&ecs.Position{X: float64(100 + rand.Intn(3000)), Y: float64(100 + rand.Intn(3000))},
+			&ecs.Item{Type: loot.Type},
+			&ecs.Position{X: loot.X, Y: loot.Y},
 		)
 	}
 
-	// Create Zombies
-	for i := 0; i < 150; i++ {
+	// Spawn zombies from pre-validated non-colliding coordinates
+	for _, zs := range gameMap.ZombieSpawns {
 		isRunner := rand.Float64() < 0.2 // 20% chance to be a runner
 		speed := 1.0 + rand.Float64()*0.5
 		if isRunner {
 			speed = 2.2 + rand.Float64()*0.4
-		}
-
-		// Keep zombies a bit away from spawn
-		var zx, zy float64
-		for {
-			zx = float64(100 + rand.Intn(3000))
-			zy = float64(100 + rand.Intn(3000))
-			if math.Sqrt((zx-playerStartX)*(zx-playerStartX) + (zy-playerStartY)*(zy-playerStartY)) > 300 {
-				break
-			}
 		}
 
 		zombieMap.NewEntity(
@@ -102,7 +87,7 @@ func (g *Game) Reset() {
 				IsRunner:    isRunner,
 				WanderTimer: rand.Intn(120),
 			},
-			&ecs.Position{X: zx, Y: zy},
+			&ecs.Position{X: zs.X, Y: zs.Y},
 			&ecs.Velocity{X: 0, Y: 0},
 			&ecs.Sprite{
 				Color: color.RGBA{R: 255, G: 0, B: 0, A: 255},
@@ -248,7 +233,11 @@ func (s *UpdateSystem) processInputAndCombat() {
 		}
 
 		if player.Infected {
-			player.Health -= 0.05 // Lose 3 health per second (takes ~33 seconds to die)
+			drain := 0.05 // Lose 3 health per second (takes ~33 seconds to die)
+			if player.ArmorEquipped && player.ArmorDefense > 0 {
+				drain *= (1.0 - player.ArmorDefense)
+			}
+			player.Health -= drain
 			if player.Health <= 0 {
 				player.Dead = true
 			}
@@ -312,7 +301,26 @@ func (s *UpdateSystem) processInputAndCombat() {
 					used = true
 				} else if t == "weapon" {
 					player.WeaponEquipped = true
+					player.WeaponType = "weapon"
 					player.WeaponDurability = 5
+					used = true
+				} else if t == "axe" {
+					player.WeaponEquipped = true
+					player.WeaponType = "axe"
+					player.WeaponDurability = 12
+					used = true
+				} else if t == "shotgun" {
+					player.WeaponEquipped = true
+					player.WeaponType = "shotgun"
+					player.WeaponDurability = 15
+					used = true
+				} else if t == "armor" || t == "vest" {
+					player.ArmorEquipped = true
+					player.ArmorType = "vest"
+					player.ArmorDefense = 0.50
+					player.ArmorDurability = 10
+					player.ArmorMaxDurability = 10
+					player.InfectionResist = 0.70
 					used = true
 				}
 				
@@ -335,10 +343,43 @@ func (s *UpdateSystem) processInputAndCombat() {
 				vel.X += speed
 			}
 
+			// Mouse Input
+			isoX, isoY := WorldToIso(pos.X, pos.Y)
+			camX := isoX - 400
+			camY := isoY - 300
+			mx, my := ebiten.CursorPosition()
+			mouseIsoX := float64(mx) + camX
+			mouseIsoY := float64(my) + camY
+			mouseWorldX, mouseWorldY := IsoToWorld(mouseIsoX, mouseIsoY)
+
+			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+				dx := mouseWorldX - pos.X
+				dy := mouseWorldY - pos.Y
+				dist := math.Hypot(dx, dy)
+				if dist > speed {
+					vel.X = (dx / dist) * speed
+					vel.Y = (dy / dist) * speed
+				} else if dist > 0 {
+					vel.X = dx
+					vel.Y = dy
+				}
+			}
+
 			// Update facing
 			if vel.X != 0 || vel.Y != 0 {
 				player.FacingX = vel.X / speed
 				player.FacingY = vel.Y / speed
+			}
+
+			isAttacking := ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyX) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+				dx := mouseWorldX - pos.X
+				dy := mouseWorldY - pos.Y
+				dist := math.Hypot(dx, dy)
+				if dist > 0.001 {
+					player.FacingX = dx / dist
+					player.FacingY = dy / dist
+				}
 			}
 
 			// Combat
@@ -346,46 +387,175 @@ func (s *UpdateSystem) processInputAndCombat() {
 				player.AttackCooldown--
 			}
 			
-			isAttacking := ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyX)
 			if isAttacking && player.AttackCooldown <= 0 {
 				player.AttackCooldown = 30 // Half second cooldown
 
-				attackX := pos.X + player.FacingX*24
-				attackY := pos.Y + player.FacingY*24
-				
-				hitZombies := false
-				zQuery := s.zombieFilter.Query()
-				for zQuery.Next() {
-					z, zPos, zVel := zQuery.Get()
-					ent := zQuery.Entity()
-					
-					dx := attackX - zPos.X
-					dy := attackY - zPos.Y
-					if math.Sqrt(dx*dx + dy*dy) < 24.0 { // Hit radius
-						hitZombies = true
-						if player.WeaponEquipped {
-							toRemoveZombies = append(toRemoveZombies, ent)
-						} else {
-							// Shove!
-							z.StunTimer = 45
-							zVel.X = player.FacingX * 5.0
-							zVel.Y = player.FacingY * 5.0
+				if player.WeaponEquipped && player.WeaponType == "shotgun" {
+					// Check for ammo in inventory
+					ammoIdx := -1
+					for idx, itm := range player.Inventory {
+						if itm == "ammo" {
+							ammoIdx = idx
+							break
 						}
 					}
-				}
-				
-				if player.WeaponEquipped {
+
+					if ammoIdx >= 0 {
+						// Consume 1 ammo item
+						player.Inventory = append(player.Inventory[:ammoIdx], player.Inventory[ammoIdx+1:]...)
+
+						// Deduct shotgun durability
+						player.WeaponDurability--
+						if player.WeaponDurability <= 0 {
+							player.WeaponEquipped = false
+							player.WeaponType = ""
+							player.WeaponDurability = 0
+						}
+
+						// Play gunshot blast sound
+						assets.PlaySound(assets.HitSound)
+
+						// Normalize facing vector
+						facingLen := math.Hypot(player.FacingX, player.FacingY)
+						facingX, facingY := player.FacingX, player.FacingY
+						if facingLen < 0.001 {
+							facingX, facingY = 1.0, 0.0
+						} else {
+							facingX /= facingLen
+							facingY /= facingLen
+						}
+
+						// Shotgun Spread Cone (Range: 160px, Angle: +-22.5 degrees, Point-blank < 24px)
+						const maxShotgunRange = 160.0
+						const cosSpread = 0.9238795325112867
+
+						zQuery := s.zombieFilter.Query()
+						for zQuery.Next() {
+							_, zPos, _ := zQuery.Get()
+							ent := zQuery.Entity()
+
+							dx := zPos.X - pos.X
+							dy := zPos.Y - pos.Y
+							dist := math.Hypot(dx, dy)
+
+							if dist <= maxShotgunRange {
+								if dist < 24.0 {
+									// Point-blank kill
+									toRemoveZombies = append(toRemoveZombies, ent)
+								} else {
+									cosAngle := (facingX*dx + facingY*dy) / dist
+									if cosAngle >= cosSpread {
+										toRemoveZombies = append(toRemoveZombies, ent)
+									}
+								}
+							}
+						}
+
+						// Acoustic Noise Pulse: Alerts all wandering zombies within 400.0px
+						noiseQuery := s.zombieFilter.Query()
+						for noiseQuery.Next() {
+							z, zPos, _ := noiseQuery.Get()
+							zdx := pos.X - zPos.X
+							zdy := pos.Y - zPos.Y
+							if math.Hypot(zdx, zdy) <= 400.0 {
+								z.Chasing = true
+								z.WanderTimer = 0
+							}
+						}
+					} else {
+						// Dry Fire / Out of Ammo: Mechanical click & defensive butt shove
+						assets.PlaySound(assets.ShoveSound)
+
+						attackX := pos.X + player.FacingX*24.0
+						attackY := pos.Y + player.FacingY*24.0
+						zQuery := s.zombieFilter.Query()
+						for zQuery.Next() {
+							z, zPos, zVel := zQuery.Get()
+							dx := attackX - zPos.X
+							dy := attackY - zPos.Y
+							if math.Hypot(dx, dy) < 24.0 {
+								z.StunTimer = 45
+								zVel.X = player.FacingX * 5.0
+								zVel.Y = player.FacingY * 5.0
+							}
+						}
+					}
+				} else if player.WeaponEquipped && player.WeaponType == "axe" {
+					// Fire Axe Melee Attack: Cleave reach 32.0px, radius 32.0px
+					attackX := pos.X + player.FacingX*32.0
+					attackY := pos.Y + player.FacingY*32.0
+					hitZombies := false
+
+					zQuery := s.zombieFilter.Query()
+					for zQuery.Next() {
+						_, zPos, _ := zQuery.Get()
+						ent := zQuery.Entity()
+
+						dx := attackX - zPos.X
+						dy := attackY - zPos.Y
+						if math.Hypot(dx, dy) < 32.0 {
+							hitZombies = true
+							toRemoveZombies = append(toRemoveZombies, ent)
+						}
+					}
+
 					if hitZombies {
 						assets.PlaySound(assets.HitSound)
 						player.WeaponDurability--
 						if player.WeaponDurability <= 0 {
 							player.WeaponEquipped = false
+							player.WeaponType = ""
+							player.WeaponDurability = 0
 						}
 					} else {
-						// Swoosh sound? Just play shove sound for now
+						assets.PlaySound(assets.ShoveSound)
+					}
+				} else if player.WeaponEquipped {
+					// Standard Melee Attack (Bat/Club): Reach 24.0px, radius 24.0px
+					attackX := pos.X + player.FacingX*24.0
+					attackY := pos.Y + player.FacingY*24.0
+					hitZombies := false
+
+					zQuery := s.zombieFilter.Query()
+					for zQuery.Next() {
+						_, zPos, _ := zQuery.Get()
+						ent := zQuery.Entity()
+
+						dx := attackX - zPos.X
+						dy := attackY - zPos.Y
+						if math.Hypot(dx, dy) < 24.0 {
+							hitZombies = true
+							toRemoveZombies = append(toRemoveZombies, ent)
+						}
+					}
+
+					if hitZombies {
+						assets.PlaySound(assets.HitSound)
+						player.WeaponDurability--
+						if player.WeaponDurability <= 0 {
+							player.WeaponEquipped = false
+							player.WeaponType = ""
+							player.WeaponDurability = 0
+						}
+					} else {
 						assets.PlaySound(assets.ShoveSound)
 					}
 				} else {
+					// Unarmed Shove
+					attackX := pos.X + player.FacingX*24.0
+					attackY := pos.Y + player.FacingY*24.0
+
+					zQuery := s.zombieFilter.Query()
+					for zQuery.Next() {
+						z, zPos, zVel := zQuery.Get()
+						dx := attackX - zPos.X
+						dy := attackY - zPos.Y
+						if math.Hypot(dx, dy) < 24.0 {
+							z.StunTimer = 45
+							zVel.X = player.FacingX * 5.0
+							zVel.Y = player.FacingY * 5.0
+						}
+					}
 					assets.PlaySound(assets.ShoveSound)
 				}
 			}
@@ -459,11 +629,35 @@ func (s *UpdateSystem) processZombies() {
 			continue // Skip standard AI logic while stunned
 		}
 
-		// Infection Check
+		// Infection Check & Armor Deflection
 		if dist < 14.0 && !playerDead {
 			pMap := arkecs.NewMap1[ecs.Player](s.world)
 			if playerComp := pMap.Get(playerEnt); playerComp != nil {
-				playerComp.Infected = true
+				if playerComp.ArmorEquipped {
+					// Deflection roll against player's InfectionResist (e.g. 0.70 = 70% chance to block infection)
+					if !playerComp.Infected {
+						if rand.Float64() < playerComp.InfectionResist {
+							// Deflected! Armor blocked the zombie bite/scratch.
+						} else {
+							// Deflection failed! Zombie bite penetrated the armor.
+							playerComp.Infected = true
+						}
+					}
+					// Deduct armor durability on contact hit
+					playerComp.ArmorDurability--
+					if playerComp.ArmorDurability <= 0 {
+						// Armor broke under the zombie attack!
+						playerComp.ArmorEquipped = false
+						playerComp.ArmorType = ""
+						playerComp.ArmorDefense = 0.0
+						playerComp.ArmorDurability = 0
+						playerComp.ArmorMaxDurability = 0
+						playerComp.InfectionResist = 0.0
+					}
+				} else {
+					// Unarmored player takes immediate infection on contact
+					playerComp.Infected = true
+				}
 			}
 		}
 
@@ -549,6 +743,12 @@ func WorldToIso(wx, wy float64) (isoX, isoY float64) {
 	return
 }
 
+func IsoToWorld(isoX, isoY float64) (wx, wy float64) {
+	wx = isoY + isoX/2.0
+	wy = isoY - isoX/2.0
+	return
+}
+
 func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var camX, camY float64
 	var playerX, playerY float64
@@ -558,9 +758,14 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var playerThirst float64
 	var playerInventory []string
 	var hasWeapon bool
+	var playerWeaponType string
 	var attackCooldown int
 	var playerDurability int
 	var playerFacingX, playerFacingY float64
+	var hasArmor bool
+	var armorDurability int
+	var armorMaxDurability int
+	var armorDefense float64
 	
 	pq := arkecs.NewFilter2[ecs.Player, ecs.Position](s.world).Query()
 	for pq.Next() {
@@ -573,10 +778,15 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		playerThirst = p.Thirst
 		playerInventory = p.Inventory
 		hasWeapon = p.WeaponEquipped
+		playerWeaponType = p.WeaponType
 		attackCooldown = p.AttackCooldown
 		playerDurability = p.WeaponDurability
 		playerFacingX = p.FacingX
 		playerFacingY = p.FacingY
+		hasArmor = p.ArmorEquipped
+		armorDurability = p.ArmorDurability
+		armorMaxDurability = p.ArmorMaxDurability
+		armorDefense = p.ArmorDefense
 		
 		isoX, isoY := WorldToIso(pPos.X, pPos.Y)
 		camX = isoX - 400
@@ -619,12 +829,18 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			}
 
 			switch t {
-			case world.TileGrass, world.TileTree:
+			case world.TileGrass, world.TileTree, world.TileFence:
 				screen.DrawImage(assets.GrassImage, op)
 			case world.TileDirt:
 				screen.DrawImage(assets.DirtImage, op)
 			case world.TileWoodFloor:
 				screen.DrawImage(assets.WoodImage, op)
+			case world.TileAsphalt:
+				screen.DrawImage(assets.AsphaltImage, op)
+			case world.TileConcrete, world.TileDebris:
+				screen.DrawImage(assets.ConcreteImage, op)
+			case world.TileTileFloor:
+				screen.DrawImage(assets.TileFloorImage, op)
 			}
 		}
 	}
@@ -636,11 +852,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	}
 	var sprites []Renderable
 
-	// Add walls & trees
+	// Add walls, trees, fences & debris
 	for y := 0; y < s.gameMap.Height; y++ {
 		for x := 0; x < s.gameMap.Width; x++ {
 			t := s.gameMap.GetTile(x, y)
-			if t == world.TileWall || t == world.TileTree {
+			if t == world.TileWall || t == world.TileTree || t == world.TileFence || t == world.TileDebris {
 				worldX := float64(x * world.TileSize)
 				worldY := float64(y * world.TileSize)
 				
@@ -658,10 +874,19 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 				isoX, isoY := WorldToIso(worldX, worldY)
 				
 				var img *ebiten.Image
-				if t == world.TileWall {
+				switch t {
+				case world.TileWall:
 					img = assets.WallImage
-				} else {
+				case world.TileTree:
 					img = assets.TreeImage
+				case world.TileFence:
+					img = assets.FenceImage
+				case world.TileDebris:
+					img = assets.DebrisImage
+				}
+
+				if img == nil {
+					continue
 				}
 				
 				drawX := isoX - 32 - camX
@@ -710,10 +935,21 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		op.GeoM.Translate(drawX, drawY)
 
 		img := assets.WeaponImage
-		if item.Type == "food" {
+		switch item.Type {
+		case "food":
 			img = assets.FoodImage
-		} else if item.Type == "water" {
+		case "water":
 			img = assets.WaterImage
+		case "weapon":
+			img = assets.WeaponImage
+		case "axe":
+			img = assets.AxeImage
+		case "shotgun":
+			img = assets.ShotgunImage
+		case "ammo":
+			img = assets.AmmoImage
+		case "armor":
+			img = assets.ArmorImage
 		}
 
 		sprites = append(sprites, Renderable{
@@ -765,6 +1001,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			} else if playerInfected {
 				pulse := 0.5 + 0.5*math.Sin(float64(playerHealth))
 				op.ColorScale.Scale(float32(pulse), 1, float32(pulse), 1)
+			} else if hasArmor {
+				// Tactical Armor Visual Tint: Steel-Blue metallic highlight
+				op.ColorScale.Scale(0.75, 0.85, 1.25, 1.0)
 			}
 			if attackCooldown > 20 {
 				op.ColorScale.Scale(2, 2, 2, 1)
@@ -802,9 +1041,15 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		
 		// Semi-transparent indicator
 		if hasWeapon {
-			op.ColorScale.Scale(1, 0, 0, 0.7) // Red if weapon
+			if playerWeaponType == "shotgun" {
+				op.ColorScale.Scale(1.0, 0.6, 0.2, 0.8) // Orange for shotgun
+			} else if playerWeaponType == "axe" {
+				op.ColorScale.Scale(1.0, 0.2, 0.2, 0.8) // Red-orange for axe
+			} else {
+				op.ColorScale.Scale(1.0, 0.0, 0.0, 0.7) // Red for club/weapon
+			}
 		} else {
-			op.ColorScale.Scale(1, 1, 0, 0.7) // Yellow if shove
+			op.ColorScale.Scale(1.0, 1.0, 0.0, 0.7)     // Yellow if shove
 		}
 
 		sprites = append(sprites, Renderable{
@@ -856,10 +1101,43 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	vector.DrawFilledRect(screen, 10, 55, thirstW, 15, color.RGBA{0, 191, 255, 255}, false)
 	ebitenutil.DebugPrintAt(screen, "Thirst", 15, 55)
 
-	if hasWeapon {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE/X to attack)", playerDurability), 10, 75)
+	// Armor Bar (Y: 75, H: 15)
+	vector.DrawFilledRect(screen, 10, 75, 200, 15, color.RGBA{30, 45, 60, 255}, false)
+	armorW := float32(0)
+	if armorMaxDurability > 0 && armorDurability > 0 {
+		armorW = float32(float64(armorDurability) / float64(armorMaxDurability) * 200.0)
+		if armorW > 200 {
+			armorW = 200
+		}
+	}
+	if armorW > 0 {
+		vector.DrawFilledRect(screen, 10, 75, armorW, 15, color.RGBA{70, 130, 180, 255}, false) // Steel Blue
+	}
+	if hasArmor && armorDurability > 0 {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Armor: %d/%d (Def: %d%%)", armorDurability, armorMaxDurability, int(armorDefense*100)), 15, 75)
 	} else {
-		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Press SPACE/X to shove zombies back)", 10, 75)
+		ebitenutil.DebugPrintAt(screen, "Armor: NONE", 15, 75)
+	}
+
+	// Weapon Text (Repositioned to Y: 95)
+	if hasWeapon && playerDurability > 0 {
+		wType := strings.ToUpper(playerWeaponType)
+		if wType == "" {
+			wType = "WEAPON"
+		}
+		if playerWeaponType == "shotgun" {
+			ammoCount := 0
+			for _, item := range playerInventory {
+				if item == "ammo" {
+					ammoCount++
+				}
+			}
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: %s (%d hits | Ammo: %d)", wType, playerDurability, ammoCount), 10, 95)
+		} else {
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: %s (%d hits)", wType, playerDurability), 10, 95)
+		}
+	} else {
+		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Fists)", 10, 95)
 	}
 
 	// Inventory UI
@@ -876,8 +1154,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		ebitenutil.DebugPrintAt(screen, text, 555, y+2)
 	}
 
+	// Infected Status (Repositioned to Y: 115)
 	if playerInfected && !playerDead {
-		ebitenutil.DebugPrintAt(screen, "INFECTED!", 10, 95)
+		ebitenutil.DebugPrintAt(screen, "INFECTED!", 10, 115)
 	}
 	if playerDead {
 		ebitenutil.DebugPrintAt(screen, "YOU DIED\n(Press 'R' to restart)", 350, 280)

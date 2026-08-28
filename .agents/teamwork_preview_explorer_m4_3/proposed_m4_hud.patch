@@ -1,0 +1,77 @@
+diff --git a/internal/ecs/components.go b/internal/ecs/components.go
+index 1111111..2222222 100644
+--- a/internal/ecs/components.go
++++ b/internal/ecs/components.go
+@@ -34,6 +34,7 @@ type Player struct {
+ 	Inventory          []string
+ 	WeaponEquipped     bool
++	WeaponType         string
+ 	WeaponDurability   int
+ 	ArmorEquipped      bool
+ 	ArmorType          string
+diff --git a/internal/game/game.go b/internal/game/game.go
+index 3333333..4444444 100644
+--- a/internal/game/game.go
++++ b/internal/game/game.go
+@@ -7,6 +7,7 @@ import (
+ 	"math"
+ 	"math/rand"
+ 	"sort"
++	"strings"
+ 
+ 	"github.com/BryceWayne/go-zomboid/internal/assets"
+ 	"github.com/BryceWayne/go-zomboid/internal/ecs"
+@@ -580,6 +581,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 	var playerInventory []string
+ 	var hasWeapon bool
++	var playerWeaponType string
+ 	var attackCooldown int
+ 	var playerDurability int
+ 	var playerFacingX, playerFacingY float64
+@@ -600,6 +602,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 		playerInventory = p.Inventory
+ 		hasWeapon = p.WeaponEquipped
++		playerWeaponType = p.WeaponType
+ 		attackCooldown = p.AttackCooldown
+ 		playerDurability = p.WeaponDurability
+ 		playerFacingX = p.FacingX
+@@ -860,6 +863,12 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 		// Semi-transparent indicator
+ 		if hasWeapon {
+-			op.ColorScale.Scale(1, 0, 0, 0.7) // Red if weapon
++			if playerWeaponType == "shotgun" {
++				op.ColorScale.Scale(1, 0.6, 0.2, 0.8) // Orange for shotgun
++			} else if playerWeaponType == "axe" {
++				op.ColorScale.Scale(1, 0.2, 0.2, 0.8) // Red-orange for axe
++			} else {
++				op.ColorScale.Scale(1, 0, 0, 0.7) // Red for spiked club
++			}
+ 		} else {
+ 			op.ColorScale.Scale(1, 1, 0, 0.7) // Yellow if shove
+ 		}
+@@ -934,8 +943,24 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+ 	}
+ 
+ 	// Weapon Text (Repositioned to Y: 95)
+-	if hasWeapon {
+-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE/X to attack)", playerDurability), 10, 95)
++	if hasWeapon && playerDurability > 0 {
++		wType := strings.ToUpper(playerWeaponType)
++		if wType == "" {
++			wType = "WEAPON"
++		}
++		if playerWeaponType == "shotgun" {
++			ammoCount := 0
++			for _, item := range playerInventory {
++				if item == "ammo" {
++					ammoCount++
++				}
++			}
++			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: %s (%d hits | Ammo: %d)", wType, playerDurability, ammoCount), 10, 95)
++		} else {
++			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: %s (%d hits)", wType, playerDurability), 10, 95)
++		}
+ 	} else {
+-		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Press SPACE/X to shove zombies back)", 10, 95)
++		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Fists)", 10, 95)
+ 	}

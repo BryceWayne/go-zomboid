@@ -1,0 +1,51 @@
+diff --git a/internal/ecs/components.go b/internal/ecs/components.go
+--- a/internal/ecs/components.go
++++ b/internal/ecs/components.go
+@@ -28,14 +28,20 @@
+ // Player marker component.
+ type Player struct {
+ 	Health         float64
+ 	Hunger         float64 // 100.0 is full, 0.0 is starving
+ 	Thirst         float64 // 100.0 is hydrated, 0.0 is dehydrated
+ 	Inventory      []string
+-	WeaponEquipped   bool
+-	WeaponDurability int
+-	AttackCooldown   int
+-	Dead             bool
+-	Infected         bool
+-	FacingX          float64
+-	FacingY          float64
++	WeaponEquipped     bool
++	WeaponType         string
++	WeaponDurability   int
++	ArmorEquipped      bool
++	ArmorType          string
++	ArmorDefense       float64
++	ArmorDurability    int
++	ArmorMaxDurability int
++	InfectionResist    float64
++	AttackCooldown     int
++	Dead               bool
++	Infected           bool
++	FacingX            float64
++	FacingY            float64
+ }
+diff --git a/internal/game/game.go b/internal/game/game.go
+--- a/internal/game/game.go
++++ b/internal/game/game.go
+@@ -298,6 +298,13 @@
+ 				} else if t == "weapon" {
+ 					player.WeaponEquipped = true
+ 					player.WeaponDurability = 5
+ 					used = true
++				} else if t == "armor" || t == "vest" {
++					player.ArmorEquipped = true
++					player.ArmorType = "vest"
++					player.ArmorDefense = 0.50
++					player.ArmorDurability = 10
++					player.ArmorMaxDurability = 10
++					player.InfectionResist = 0.70
++					used = true
+ 				}
+ 				
+ 				if used {
