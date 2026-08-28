@@ -64,10 +64,10 @@ func (g *Game) Reset() {
 		&ecs.Collider{Width: 16, Height: 16},
 	)
 
-	// Guaranteed starting items near player
-	itemMap.NewEntity(&ecs.Item{Type: "weapon"}, &ecs.Position{X: playerStartX - 32, Y: playerStartY})
-	itemMap.NewEntity(&ecs.Item{Type: "food"}, &ecs.Position{X: playerStartX + 32, Y: playerStartY})
-	itemMap.NewEntity(&ecs.Item{Type: "water"}, &ecs.Position{X: playerStartX, Y: playerStartY + 32})
+	// Guaranteed starting items near player (edge of fog of war is ~250px)
+	itemMap.NewEntity(&ecs.Item{Type: "weapon"}, &ecs.Position{X: playerStartX - 200, Y: playerStartY})
+	itemMap.NewEntity(&ecs.Item{Type: "food"}, &ecs.Position{X: playerStartX + 180, Y: playerStartY + 100})
+	itemMap.NewEntity(&ecs.Item{Type: "water"}, &ecs.Position{X: playerStartX + 200, Y: playerStartY - 50})
 
 	// Create Items on map
 	itemTypes := []string{"weapon", "weapon", "weapon", "weapon", "weapon", "food", "food", "food", "food", "food", "food", "food", "food", "water", "water", "water", "water", "water", "water", "water"}
