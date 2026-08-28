@@ -345,7 +345,9 @@ func (s *UpdateSystem) processInputAndCombat() {
 			if player.AttackCooldown > 0 {
 				player.AttackCooldown--
 			}
-			if ebiten.IsKeyPressed(ebiten.KeySpace) && player.AttackCooldown <= 0 {
+			
+			isAttacking := ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsKeyPressed(ebiten.KeyX)
+			if isAttacking && player.AttackCooldown <= 0 {
 				player.AttackCooldown = 30 // Half second cooldown
 
 				attackX := pos.X + player.FacingX*24
@@ -822,9 +824,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	ebitenutil.DebugPrintAt(screen, "Thirst", 15, 55)
 
 	if hasWeapon {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE to attack)", playerDurability), 10, 75)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Weapon: EQUIPPED (Durability: %d) (Press SPACE/X to attack)", playerDurability), 10, 75)
 	} else {
-		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Press SPACE to shove zombies back)", 10, 75)
+		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Press SPACE/X to shove zombies back)", 10, 75)
 	}
 
 	// Inventory UI
