@@ -83,7 +83,7 @@ func (g *Game) Reset() {
 		isRunner := rand.Float64() < 0.2 // 20% chance to be a runner
 		speed := 1.0 + rand.Float64()*0.5
 		if isRunner {
-			speed = 2.8 + rand.Float64()*0.5
+			speed = 2.2 + rand.Float64()*0.4
 		}
 
 		// Keep zombies a bit away from spawn
