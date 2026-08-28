@@ -559,8 +559,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var playerInventory []string
 	var hasWeapon bool
 	var attackCooldown int
-	
 	var playerDurability int
+	var playerFacingX, playerFacingY float64
 	
 	pq := arkecs.NewFilter2[ecs.Player, ecs.Position](s.world).Query()
 	for pq.Next() {
@@ -575,6 +575,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		hasWeapon = p.WeaponEquipped
 		attackCooldown = p.AttackCooldown
 		playerDurability = p.WeaponDurability
+		playerFacingX = p.FacingX
+		playerFacingY = p.FacingY
 		
 		isoX, isoY := WorldToIso(pPos.X, pPos.Y)
 		camX = isoX - 400
@@ -784,6 +786,37 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			Depth: pos.X + pos.Y,
 			Op:    op,
 		})
+	}
+
+	if !playerDead {
+		// Draw facing indicator
+		targetX := playerX + playerFacingX*20.0
+		targetY := playerY + playerFacingY*20.0
+		
+		isoX, isoY := WorldToIso(targetX, targetY)
+		drawX := isoX - 4 - camX
+		drawY := isoY - 4 - camY
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(drawX, drawY)
+		
+		// Semi-transparent indicator
+		if hasWeapon {
+			op.ColorScale.Scale(1, 0, 0, 0.7) // Red if weapon
+		} else {
+			op.ColorScale.Scale(1, 1, 0, 0.7) // Yellow if shove
+		}
+
+		sprites = append(sprites, Renderable{
+			Image: assets.PlayerImage, // Use player image block for now, scaled down? Wait, we can scale it.
+			Depth: targetX + targetY,
+			Op:    op,
+		})
+		
+		// Let's actually scale the indicator to be small (4x4)
+		op.GeoM.Reset()
+		op.GeoM.Scale(0.25, 0.25)
+		op.GeoM.Translate(drawX, drawY)
 	}
 
 	sort.SliceStable(sprites, func(i, j int) bool {
