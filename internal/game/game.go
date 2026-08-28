@@ -20,10 +20,11 @@ type Game struct {
 	gameMap   *world.Map
 	updateSys *UpdateSystem
 	drawSys   *DrawSystem
+	timeOfDay float64
 }
 
 func NewGame() *Game {
-	g := &Game{}
+	g := &Game{timeOfDay: 12.0} // Start at noon
 	g.Reset()
 	return g
 }
@@ -89,6 +90,12 @@ func (g *Game) Reset() {
 }
 
 func (g *Game) Update() error {
+	// Advance time: 1 in-game hour per 2.5 seconds (150 frames) => 24 hours per 1 real minute
+	g.timeOfDay += 24.0 / 3600.0
+	if g.timeOfDay >= 24.0 {
+		g.timeOfDay -= 24.0
+	}
+
 	// Check for restart if dead
 	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		var isDead bool
@@ -111,7 +118,7 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 15, G: 15, B: 15, A: 255})
-	g.drawSys.Draw(screen)
+	g.drawSys.Draw(screen, g.timeOfDay)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -142,6 +149,13 @@ func NewUpdateSystem(w *arkecs.World, m *world.Map) *UpdateSystem {
 }
 
 func (s *UpdateSystem) Update() {
+	// Update FOV
+	pq := s.playerFilter.Query()
+	for pq.Next() {
+		_, pPos, _ := pq.Get()
+		s.gameMap.CalculateFOV(pPos.X, pPos.Y, 15) // 15 tile vision radius
+	}
+
 	s.processItems()
 	s.processInputAndCombat()
 	s.processZombies()
@@ -405,7 +419,7 @@ func WorldToIso(wx, wy float64) (isoX, isoY float64) {
 	return
 }
 
-func (s *DrawSystem) Draw(screen *ebiten.Image) {
+func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var camX, camY float64
 	var playerX, playerY float64
 	var playerDead, playerInfected bool
@@ -437,7 +451,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 			if t == world.TileWall {
 				continue
 			}
-			
+
 			worldX := float64(x * world.TileSize)
 			worldY := float64(y * world.TileSize)
 
@@ -446,14 +460,22 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 			if dx*dx + dy*dy > visionRadius*visionRadius {
 				continue
 			}
+			
+			idx := y*s.gameMap.Width + x
+			if !s.gameMap.Visible[idx] && !s.gameMap.Explored[idx] {
+				continue
+			}
 
 			isoX, isoY := WorldToIso(worldX, worldY)
-			
 			drawX := isoX - 32 - camX
 			drawY := isoY - 0 - camY
 
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(drawX, drawY)
+			
+			if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
+				op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
+			}
 
 			switch t {
 			case world.TileGrass, world.TileTree:
@@ -473,7 +495,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 	}
 	var sprites []Renderable
 
-	// Add walls
+	// Add walls & trees
 	for y := 0; y < s.gameMap.Height; y++ {
 		for x := 0; x < s.gameMap.Width; x++ {
 			t := s.gameMap.GetTile(x, y)
@@ -484,6 +506,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 				dx := worldX - playerX
 				dy := worldY - playerY
 				if dx*dx + dy*dy > visionRadius*visionRadius {
+					continue
+				}
+
+				idx := y*s.gameMap.Width + x
+				if !s.gameMap.Visible[idx] && !s.gameMap.Explored[idx] {
 					continue
 				}
 
@@ -501,6 +528,10 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 
 				op := &ebiten.DrawImageOptions{}
 				op.GeoM.Translate(drawX, drawY)
+
+				if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
+					op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
+				}
 
 				sprites = append(sprites, Renderable{
 					Image: img,
@@ -520,6 +551,14 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 		dy := iPos.Y - playerY
 		if dx*dx + dy*dy > visionRadius*visionRadius {
 			continue
+		}
+
+		tx := int(iPos.X) / world.TileSize
+		ty := int(iPos.Y) / world.TileSize
+		if tx >= 0 && tx < s.gameMap.Width && ty >= 0 && ty < s.gameMap.Height {
+			if !s.gameMap.Visible[ty*s.gameMap.Width+tx] {
+				continue // Can't see item in darkness
+			}
 		}
 
 		isoX, isoY := WorldToIso(iPos.X, iPos.Y)
@@ -552,6 +591,14 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 			if dx*dx + dy*dy > visionRadius*visionRadius {
 				continue
 			}
+
+			tx := int(pos.X) / world.TileSize
+			ty := int(pos.Y) / world.TileSize
+			if tx >= 0 && tx < s.gameMap.Width && ty >= 0 && ty < s.gameMap.Height {
+				if !s.gameMap.Visible[ty*s.gameMap.Width+tx] {
+					continue // Zombies in darkness are invisible!
+				}
+			}
 		}
 
 		isoX, isoY := WorldToIso(pos.X, pos.Y)
@@ -571,10 +618,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 				pulse := 0.5 + 0.5*math.Sin(float64(playerHealth))
 				op.ColorScale.Scale(float32(pulse), 1, float32(pulse), 1)
 			}
-			
-			// Draw swing effect
 			if attackCooldown > 20 {
-				// Flash white while swinging
 				op.ColorScale.Scale(2, 2, 2, 1)
 			}
 		} else if z := zMap.Get(ent); z != nil {
@@ -600,16 +644,20 @@ func (s *DrawSystem) Draw(screen *ebiten.Image) {
 		screen.DrawImage(s.Image, s.Op)
 	}
 
-	// 4. UI Rendering
-	
-	// Health Bar Background
-	vector.DrawFilledRect(screen, 10, 10, 200, 20, color.RGBA{100, 0, 0, 255}, false)
-	// Health Bar Fill
-	hpWidth := float32(playerHealth / 100.0 * 200.0)
-	if hpWidth < 0 {
-		hpWidth = 0
+	// 5. Lighting / Day-Night Cycle
+	// timeOfDay goes 0.0 to 24.0. Noon is 12, Midnight is 0 or 24.
+	// alpha goes from 0.0 (noon) to 0.90 (midnight)
+	alpha := 0.45 + 0.45*math.Cos((timeOfDay/24.0)*math.Pi*2)
+	if alpha > 0.05 {
+		vector.DrawFilledRect(screen, 0, 0, 800, 600, color.RGBA{0, 0, 15, uint8(alpha * 255)}, false)
 	}
+
+	// 6. UI Rendering
+	vector.DrawFilledRect(screen, 10, 10, 200, 20, color.RGBA{100, 0, 0, 255}, false)
+	hpWidth := float32(playerHealth / 100.0 * 200.0)
+	if hpWidth < 0 { hpWidth = 0 }
 	vector.DrawFilledRect(screen, 10, 10, hpWidth, 20, color.RGBA{0, 255, 0, 255}, false)
+	
 	ebitenutil.DebugPrintAt(screen, "Health", 15, 12)
 
 	if hasWeapon {
