@@ -45,6 +45,7 @@ var (
 	ShotgunImage *ebiten.Image
 	AmmoImage    *ebiten.Image
 	ArmorImage   *ebiten.Image
+	AntidoteImage *ebiten.Image
 	FoodImage    *ebiten.Image
 	WaterImage   *ebiten.Image
 )
@@ -81,6 +82,7 @@ func Load() {
 	ShotgunImage = loadEbitenImage("images/shotgun.png")
 	AmmoImage = loadEbitenImage("images/ammo.png")
 	ArmorImage = loadEbitenImage("images/armor.png")
+	AntidoteImage = loadEbitenImage("images/antidote.png")
 	FoodImage = loadEbitenImage("images/food.png")
 	WaterImage = loadEbitenImage("images/water.png")
 }

@@ -106,7 +106,7 @@ type FloatPoint struct {
 
 // LootSpawn represents a structured contextual loot placement.
 type LootSpawn struct {
-	Type string  // "food", "water", "weapon", "axe", "shotgun", "ammo", "armor"
+	Type string  // "food", "water", "weapon", "axe", "shotgun", "ammo", "armor", "antidote"
 	X, Y float64 // world pixel coordinates
 }
 
@@ -837,12 +837,14 @@ func (m *Map) generateThematicLoot(playerTileX, playerTileY int) {
 				m.addLootIfWalkable("food", centerX-24, centerY)
 				m.addLootIfWalkable("water", centerX+24, centerY)
 				m.addLootIfWalkable("armor", centerX, centerY)
+				m.addLootIfWalkable("antidote", centerX-16, centerY-16)
 			case RoomArmory:
 				m.addLootIfWalkable("weapon", centerX-24, centerY-24)
 				m.addLootIfWalkable("axe", centerX+24, centerY-24)
 				m.addLootIfWalkable("shotgun", centerX-24, centerY+24)
 				m.addLootIfWalkable("ammo", centerX+24, centerY+24)
 				m.addLootIfWalkable("armor", centerX, centerY)
+				m.addLootIfWalkable("antidote", centerX-16, centerY-16)
 			case RoomHoldingCell:
 				m.addLootIfWalkable("weapon", centerX, centerY)
 			case RoomOffice:

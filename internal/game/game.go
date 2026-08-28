@@ -73,6 +73,7 @@ func (g *Game) Reset() {
 		)
 	}
 
+
 	// Spawn zombies from pre-validated non-colliding coordinates
 	for _, zs := range gameMap.ZombieSpawns {
 		isRunner := rand.Float64() < 0.2 // 20% chance to be a runner
@@ -294,6 +295,9 @@ func (s *UpdateSystem) processInputAndCombat() {
 				if t == "food" && player.Hunger < 100 {
 					player.Hunger += 50
 					if player.Hunger > 100 { player.Hunger = 100 }
+					used = true
+				} else if t == "antidote" && player.Infected {
+					player.Infected = false
 					used = true
 				} else if t == "water" && player.Thirst < 100 {
 					player.Thirst += 50
@@ -963,6 +967,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			img = assets.AmmoImage
 		case "armor":
 			img = assets.ArmorImage
+		case "antidote":
+			img = assets.AntidoteImage
 		}
 
 		sprites = append(sprites, Renderable{

@@ -44,6 +44,7 @@ func main() {
 	generateShotgun("shotgun.png")
 	generateAmmo("ammo.png")
 	generateArmor("armor.png")
+	generateAntidote("antidote.png")
 
 	// 5. New Style Guide Assets (64x64)
 	generateIsoTent("tent.png")
@@ -1791,6 +1792,59 @@ func generateElevationRamp(name string) {
 			}
 		}
 	}
+
+	saveImg(name, img)
+}
+
+func generateAntidote(name string) {
+	// A small vial with glowing green liquid
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	darkBorder := color.RGBA{10, 10, 15, 255}
+	glassHi := color.RGBA{220, 230, 240, 255}
+	liquid := color.RGBA{50, 220, 60, 255}
+	liquidDark := color.RGBA{20, 150, 30, 255}
+	cork := color.RGBA{140, 100, 60, 255}
+
+	// Cork
+	setPixel(img, 7, 2, cork)
+	setPixel(img, 8, 2, cork)
+	setPixel(img, 7, 3, cork)
+	setPixel(img, 8, 3, cork)
+
+	// Bottle neck
+	setPixel(img, 6, 4, darkBorder)
+	setPixel(img, 7, 4, glassHi)
+	setPixel(img, 8, 4, glassHi)
+	setPixel(img, 9, 4, darkBorder)
+	setPixel(img, 6, 5, darkBorder)
+	setPixel(img, 9, 5, darkBorder)
+
+	// Bottle body
+	for y := 6; y <= 12; y++ {
+		setPixel(img, 5, y, darkBorder)
+		setPixel(img, 10, y, darkBorder)
+		for x := 6; x <= 9; x++ {
+			if y > 8 {
+				if x < 8 {
+					setPixel(img, x, y, liquid)
+				} else {
+					setPixel(img, x, y, liquidDark)
+				}
+			} else {
+				setPixel(img, x, y, glassHi)
+			}
+		}
+	}
+	
+	// Highlight on liquid
+	setPixel(img, 6, 9, glassHi)
+	setPixel(img, 6, 10, glassHi)
+
+	// Base
+	setPixel(img, 6, 13, darkBorder)
+	setPixel(img, 7, 13, darkBorder)
+	setPixel(img, 8, 13, darkBorder)
+	setPixel(img, 9, 13, darkBorder)
 
 	saveImg(name, img)
 }
