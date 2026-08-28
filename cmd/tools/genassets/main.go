@@ -45,6 +45,14 @@ func main() {
 	generateAmmo("ammo.png")
 	generateArmor("armor.png")
 
+	// 5. New Style Guide Assets (64x64)
+	generateIsoTent("tent.png")
+	generateIsoStump("stump.png")
+	generateIsoMushroom("mushroom.png")
+	generateIsoSign("sign.png")
+	generateElevationBlock("elevation_block.png")
+	generateElevationRamp("elevation_ramp.png")
+
 	log.Println("Asset generation completed successfully.")
 }
 
@@ -532,7 +540,7 @@ func generateDirt(name string) {
 			isoDist := math.Abs(dx)/32.0 + math.Abs(dy)/16.0
 			if isoDist <= 1.0 {
 				c := baseMid
-				
+
 				if isoDist > 0.90 {
 					if x < 32 {
 						// Left face - lighter dirt
@@ -1803,6 +1811,193 @@ func generateArmor(name string) {
 
 	// Bottom Outline (y=14)
 	drawHLine(img, 3, 12, 14, darkBorder)
+
+	saveImg(name, img)
+}
+
+func generateIsoTent(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+
+	tentGreenLight := color.RGBA{80, 120, 60, 255}
+	tentGreenDark := color.RGBA{40, 70, 30, 255}
+	tentPole := color.RGBA{180, 180, 180, 255}
+	tentDark := color.RGBA{20, 35, 15, 255}
+
+	// Tent Left Face (Triangle)
+	for y := 16; y < 48; y++ {
+		for x := 16; x < 32; x++ {
+			if y > 16+(32-x)*2 && y < 48-(32-x) {
+				setPixel(img, x, y, tentGreenLight)
+			}
+		}
+	}
+	// Tent Right Face (Triangle)
+	for y := 16; y < 48; y++ {
+		for x := 32; x < 48; x++ {
+			if y > 16+(x-32)*2 && y < 48-(x-32)/2 {
+				setPixel(img, x, y, tentGreenDark)
+			}
+		}
+	}
+	// Add some details
+	setPixel(img, 32, 16, tentPole) // top pole
+
+	// Opening
+	for y := 32; y < 48; y++ {
+		for x := 28; x < 36; x++ {
+			if y > 32+(x-28) && y > 32+(36-x) {
+				setPixel(img, x, y, tentDark)
+			}
+		}
+	}
+
+	saveImg(name, img)
+}
+
+func generateIsoStump(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	bark := color.RGBA{88, 56, 32, 255}
+	woodTop := color.RGBA{185, 135, 85, 255}
+	barkDark := color.RGBA{58, 36, 20, 255}
+
+	// Base
+	for y := 36; y < 44; y++ {
+		for x := 24; x < 40; x++ {
+			if (x-32)*(x-32)+(y-40)*(y-40)*4 < 64 {
+				setPixel(img, x, y, barkDark)
+			}
+		}
+	}
+
+	// Top cut
+	for y := 30; y < 38; y++ {
+		for x := 26; x < 38; x++ {
+			if (x-32)*(x-32)+(y-34)*(y-34)*4 < 36 {
+				setPixel(img, x, y, woodTop)
+			} else if (x-32)*(x-32)+(y-34)*(y-34)*4 < 49 {
+				setPixel(img, x, y, bark)
+			}
+		}
+	}
+
+	saveImg(name, img)
+}
+
+func generateIsoMushroom(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	stem := color.RGBA{220, 210, 190, 255}
+	capCol := color.RGBA{180, 40, 40, 255}
+	spot := color.RGBA{240, 240, 240, 255}
+
+	// Stem
+	for y := 36; y < 44; y++ {
+		for x := 30; x < 34; x++ {
+			setPixel(img, x, y, stem)
+		}
+	}
+
+	// Cap
+	for y := 30; y < 38; y++ {
+		for x := 24; x < 40; x++ {
+			if (x-32)*(x-32)/2+(y-34)*(y-34)*2 < 16 {
+				setPixel(img, x, y, capCol)
+				if (x+y)%4 == 0 {
+					setPixel(img, x, y, spot)
+				}
+			}
+		}
+	}
+
+	saveImg(name, img)
+}
+
+func generateIsoSign(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	post := color.RGBA{100, 70, 40, 255}
+	board := color.RGBA{150, 110, 70, 255}
+	text := color.RGBA{40, 30, 20, 255}
+
+	// Post
+	for y := 24; y < 48; y++ {
+		for x := 30; x < 34; x++ {
+			setPixel(img, x, y, post)
+		}
+	}
+
+	// Board
+	for y := 16; y < 28; y++ {
+		for x := 16; x < 48; x++ {
+			setPixel(img, x, y, board)
+			// Mock text
+			if y > 18 && y < 26 && x > 20 && x < 44 && (x+y)%3 != 0 {
+				setPixel(img, x, y, text)
+			}
+		}
+	}
+
+	saveImg(name, img)
+}
+
+func generateElevationBlock(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	top := color.RGBA{120, 160, 80, 255} // Grass top
+	left := color.RGBA{100, 80, 60, 255} // Dirt left
+	right := color.RGBA{70, 50, 40, 255} // Dirt right
+
+	// A standard 64x32 iso tile raised by 32px
+	for y := 0; y < 64; y++ {
+		for x := 0; x < 64; x++ {
+			// Top face (y=0..32, center 32,16)
+			if y >= 0 && y <= 32 {
+				dy := y - 16
+				dx := x - 32
+				if dx < 0 {
+					dx = -dx
+				}
+				if dy < 0 {
+					dy = -dy
+				}
+				if dx+dy*2 <= 32 {
+					setPixel(img, x, y, top)
+				}
+			}
+			// Left face (x=0..32, y=16..48)
+			if x >= 0 && x <= 32 && y > 16+x/2 && y <= 48+x/2 {
+				setPixel(img, x, y, left)
+			}
+			// Right face (x=32..64, y=32..64)
+			if x >= 32 && x <= 64 && y > 32-(x-32)/2 && y <= 64-(x-32)/2 {
+				setPixel(img, x, y, right)
+			}
+		}
+	}
+
+	saveImg(name, img)
+}
+
+func generateElevationRamp(name string) {
+	w, h := 64, 64
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	rampSurf := color.RGBA{140, 180, 90, 255} // Grass ramp
+	side := color.RGBA{70, 50, 40, 255}       // Dirt side
+
+	for y := 0; y < 64; y++ {
+		for x := 0; x < 64; x++ {
+			// Slope rising from bottom-left to top-right
+			// We can fake an isometric ramp
+			if x >= 0 && x <= 64 && y >= x/2 && y <= 32+x/2 {
+				setPixel(img, x, y, rampSurf)
+			}
+			if x >= 32 && x <= 64 && y > 32+(x-32)/2 && y <= 64 {
+				setPixel(img, x, y, side) // fake side
+			}
+		}
+	}
 
 	saveImg(name, img)
 }

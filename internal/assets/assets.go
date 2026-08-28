@@ -28,10 +28,16 @@ var (
 	TileFloorImage *ebiten.Image
 
 	// Vertical Obstacles / Props (64x64)
-	WallImage   *ebiten.Image
-	TreeImage   *ebiten.Image
-	FenceImage  *ebiten.Image
-	DebrisImage *ebiten.Image
+	WallImage           *ebiten.Image
+	TreeImage           *ebiten.Image
+	FenceImage          *ebiten.Image
+	DebrisImage         *ebiten.Image
+	TentImage           *ebiten.Image
+	StumpImage          *ebiten.Image
+	MushroomImage       *ebiten.Image
+	SignImage           *ebiten.Image
+	ElevationBlockImage *ebiten.Image
+	ElevationRampImage  *ebiten.Image
 
 	// Item / Weapon / Armor Sprites (16x16)
 	WeaponImage  *ebiten.Image
@@ -62,6 +68,12 @@ func Load() {
 	TreeImage = loadEbitenImage("images/tree.png")
 	FenceImage = loadEbitenImage("images/fence.png")
 	DebrisImage = loadEbitenImage("images/debris.png")
+	TentImage = loadEbitenImage("images/tent.png")
+	StumpImage = loadEbitenImage("images/stump.png")
+	MushroomImage = loadEbitenImage("images/mushroom.png")
+	SignImage = loadEbitenImage("images/sign.png")
+	ElevationBlockImage = loadEbitenImage("images/elevation_block.png")
+	ElevationRampImage = loadEbitenImage("images/elevation_ramp.png")
 
 	// Items / Weapons / Armor
 	WeaponImage = loadEbitenImage("images/weapon.png")

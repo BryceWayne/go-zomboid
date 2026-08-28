@@ -829,7 +829,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			}
 
 			switch t {
-			case world.TileGrass, world.TileTree, world.TileFence:
+			case world.TileGrass, world.TileTree, world.TileFence, world.TileTent, world.TileElevationBlock, world.TileRamp, world.TileStump, world.TileMushroom, world.TileSign:
 				screen.DrawImage(assets.GrassImage, op)
 			case world.TileDirt:
 				screen.DrawImage(assets.DirtImage, op)
@@ -856,7 +856,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	for y := 0; y < s.gameMap.Height; y++ {
 		for x := 0; x < s.gameMap.Width; x++ {
 			t := s.gameMap.GetTile(x, y)
-			if t == world.TileWall || t == world.TileTree || t == world.TileFence || t == world.TileDebris {
+			if t == world.TileWall || t == world.TileTree || t == world.TileFence || t == world.TileDebris ||
+				t == world.TileTent || t == world.TileElevationBlock || t == world.TileRamp || t == world.TileStump || t == world.TileMushroom || t == world.TileSign {
 				worldX := float64(x * world.TileSize)
 				worldY := float64(y * world.TileSize)
 				
@@ -883,6 +884,18 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 					img = assets.FenceImage
 				case world.TileDebris:
 					img = assets.DebrisImage
+				case world.TileTent:
+					img = assets.TentImage
+				case world.TileElevationBlock:
+					img = assets.ElevationBlockImage
+				case world.TileRamp:
+					img = assets.ElevationRampImage
+				case world.TileStump:
+					img = assets.StumpImage
+				case world.TileMushroom:
+					img = assets.MushroomImage
+				case world.TileSign:
+					img = assets.SignImage
 				}
 
 				if img == nil {

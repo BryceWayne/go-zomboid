@@ -19,6 +19,12 @@ const (
 	TileTileFloor
 	TileFence
 	TileDebris
+	TileTent
+	TileElevationBlock
+	TileRamp
+	TileStump
+	TileMushroom
+	TileSign
 )
 
 const TileSize = 32
@@ -26,7 +32,7 @@ const TileSize = 32
 // IsSolid returns true if the tile blocks physical entity movement and collision.
 func (t TileType) IsSolid() bool {
 	switch t {
-	case TileWall, TileTree, TileFence, TileDebris:
+	case TileWall, TileTree, TileFence, TileDebris, TileTent, TileElevationBlock, TileStump, TileSign:
 		return true
 	default:
 		return false
@@ -41,7 +47,7 @@ func (t TileType) BlocksVision() bool {
 // IsFloor returns true if the tile is a flat surface drawn during the ground diamond pass.
 func (t TileType) IsFloor() bool {
 	switch t {
-	case TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor:
+	case TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor, TileRamp:
 		return true
 	default:
 		return false
@@ -71,6 +77,18 @@ func (t TileType) String() string {
 		return "Fence"
 	case TileDebris:
 		return "Debris"
+	case TileTent:
+		return "Tent"
+	case TileElevationBlock:
+		return "ElevationBlock"
+	case TileRamp:
+		return "Ramp"
+	case TileStump:
+		return "Stump"
+	case TileMushroom:
+		return "Mushroom"
+	case TileSign:
+		return "Sign"
 	default:
 		return "Unknown"
 	}
@@ -742,8 +760,44 @@ func (m *Map) placeEnvironmentalProps(width, height, midX, midY int) {
 		ty := 2 + rand.Intn(height-4)
 		if m.GetTile(tx, ty) == TileGrass {
 			if math.Abs(float64(tx-midX)) > 3 && math.Abs(float64(ty-midY)) > 3 {
-				m.SetTile(tx, ty, TileTree)
+				// 10% chance for a stump instead of a tree
+				if rand.Float64() < 0.10 {
+					m.SetTile(tx, ty, TileStump)
+				} else {
+					m.SetTile(tx, ty, TileTree)
+				}
+				// chance to spawn mushroom near tree
+				if rand.Float64() < 0.3 {
+					mx, my := tx+rand.Intn(3)-1, ty+rand.Intn(3)-1
+					if mx > 0 && mx < width-1 && my > 0 && my < height-1 && m.GetTile(mx, my) == TileGrass {
+						m.SetTile(mx, my, TileMushroom)
+					}
+				}
 			}
+		}
+	}
+
+	// Add a small tent campsite in the top right area
+	campX := width - 12
+	campY := 8
+	if m.GetTile(campX, campY) == TileGrass {
+		m.SetTile(campX, campY, TileTent)
+		m.SetTile(campX+1, campY, TileTent)
+		m.SetTile(campX, campY+2, TileTent)
+		m.SetTile(campX-2, campY+1, TileSign)
+		
+		// Some elevation blocks around the camp
+		m.SetTile(campX+3, campY-1, TileElevationBlock)
+		m.SetTile(campX+4, campY-1, TileElevationBlock)
+		m.SetTile(campX+4, campY, TileElevationBlock)
+		// A ramp leading up to it
+		m.SetTile(campX+3, campY, TileRamp)
+	}
+
+	// Add some random signs near roads
+	for y := midY - 5; y < midY+5; y++ {
+		if m.GetTile(midX-3, y) == TileGrass && rand.Float64() < 0.2 {
+			m.SetTile(midX-3, y, TileSign)
 		}
 	}
 }
