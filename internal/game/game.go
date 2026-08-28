@@ -248,7 +248,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 		}
 
 		if player.Infected {
-			player.Health -= 0.5
+			player.Health -= 0.05 // Lose 3 health per second (takes ~33 seconds to die)
 			if player.Health <= 0 {
 				player.Dead = true
 			}
