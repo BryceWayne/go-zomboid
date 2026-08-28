@@ -67,6 +67,8 @@ func TestAdversarial_WorldResetWhileInCombat(t *testing.T) {
 			t.Fatalf("Iter %d: No player entity found before combat simulation", iteration)
 		}
 		player := pMap.Get(pq.Entity())
+		pq.Close()
+		
 		player.Health = 22.5
 		player.Hunger = 15.0
 		player.Thirst = 8.0

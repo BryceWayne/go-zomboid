@@ -73,6 +73,12 @@ func (g *Game) Reset() {
 		)
 	}
 
+	// Give the player an antidote near their feet at spawn
+	itemMap.NewEntity(
+		&ecs.Item{Type: "antidote"},
+		&ecs.Position{X: playerStartX + 16, Y: playerStartY + 16},
+	)
+
 
 	// Spawn zombies from pre-validated non-colliding coordinates
 	for _, zs := range gameMap.ZombieSpawns {
@@ -138,7 +144,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 800, 600
+	return 1280, 720
 }
 
 // -- Systems --

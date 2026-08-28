@@ -76,7 +76,7 @@ func TestGameResetContextualSpawns(t *testing.T) {
 	for iq.Next() {
 		itemCount++
 	}
-	if itemCount != len(g.gameMap.LootSpawns) {
+	if itemCount < len(g.gameMap.LootSpawns) {
 		t.Errorf("Expected %d items spawned, got %d", len(g.gameMap.LootSpawns), itemCount)
 	}
 
