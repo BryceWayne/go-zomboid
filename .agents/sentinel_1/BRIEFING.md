@@ -1,7 +1,7 @@
-# BRIEFING — 2026-08-28T18:47:14Z
+# BRIEFING — 2026-08-28T19:22:18Z
 
 ## Mission
-Supervise execution of go-zomboid visual resolution upgrade (4x tile size 256x128, isometric engine math) and Bezier curve combat attack trails via teamwork_preview_orchestrator, monitor progress, and independently verify victory.
+Supervise execution of go-zomboid camera QoL improvements (50% global zoom-out, smooth camera lerping, mouse IsoToWorld inverted zoom math, vision/FOV culling expansion) via teamwork_preview_orchestrator, monitor progress, and independently verify victory.
 
 ## 🔒 My Identity
 - Archetype: sentinel
@@ -10,6 +10,8 @@ Supervise execution of go-zomboid visual resolution upgrade (4x tile size 256x12
 - Victory Auditor: 3f9a716d-ef7a-40b2-be03-1386728e5ae3
 - Orchestrator (Milestone 2): f7a8f969-fc3f-4f72-a625-45c03a6444ae
 - Victory Auditor (Milestone 2): 1ea183f5-eb6c-4144-980a-4b616c2c389e
+- Orchestrator (Milestone 3): 9749292c-47da-41c9-80d9-536a89b92052
+- Victory Auditor (Milestone 3): 228598f6-c59c-473f-94c2-63b13d85abce
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
@@ -18,11 +20,12 @@ Supervise execution of go-zomboid visual resolution upgrade (4x tile size 256x12
 - Keep context ultra-light
 
 ## User Context
-- **Last user request**: High-fidelity tile resolution (256x128), isometric engine math upgrade, Bezier curve combat dynamics for weapon swing trails. Integrity mode: benchmark. Requested team: full team.
+- **Last user request**: Camera QoL improvements: 50% global zoom-out scale in DrawSystem, IsoToWorld mouse-click math update, smooth camera lerping centering player on 1280x720 screen, visionRadius and FOV culling distance expansion. Integrity mode: development. Requested team: full team.
 - **Pending clarifications**: [none]
 - **Delivered results**:
   - Previous milestone: Procedural sprites, town gen, armor mitigation, weapon expansion verified.
-  - Milestone 2: 4x resolution high-fidelity sprites (256x128 floor tiles, 256x256 obstacles, 64x128 entities, 64x64 items), TileSize=128 engine isometric math & speed scaling, and dynamic Bezier curve attack swoosh combat trails. All tests pass with zero data races.
+  - Milestone 2: 4x resolution high-fidelity sprites, TileSize=128 isometric math, Bezier curve attack swoosh trails.
+  - Milestone 3: 50% global zoom-out scale in DrawSystem, smooth camera lerping with sub-pixel snapping, bijective ScreenToIso/ScreenToWorld mouse coordinate unprojection, visionRadius and FOV expansion preventing tile pop-in. All 154 tests passing.
 
 ## Project Status
 - **Phase**: complete
@@ -36,8 +39,8 @@ Supervise execution of go-zomboid visual resolution upgrade (4x tile size 256x12
 - /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md — Authoritative original user request record
 - /home/bryce/code/go-zomboid/PROJECT.md — Project plan & requirements trace
 - /home/bryce/code/go-zomboid/TEST_READY.md — Verification matrix
-- /home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_3/handoff.md — Orchestrator handoff report
-- /home/bryce/code/go-zomboid/.agents/victory_auditor_2/handoff.md — Victory Auditor handoff report
+- /home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_4/handoff.md — Milestone 3 Orchestrator handoff report
+- /home/bryce/code/go-zomboid/.agents/victory_auditor_3/handoff.md — Milestone 3 Victory Auditor handoff report
 - /home/bryce/code/go-zomboid/.agents/sentinel_1/handoff.md — Sentinel final handoff
 
 

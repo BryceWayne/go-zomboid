@@ -20,6 +20,7 @@ import (
 type Game struct {
 	world     *arkecs.World
 	gameMap   *world.Map
+	camera    *Camera
 	updateSys *UpdateSystem
 	drawSys   *DrawSystem
 	timeOfDay float64
@@ -45,6 +46,11 @@ func (g *Game) Reset() {
 	// Create Player at safe designated residential spawn
 	playerStartX := gameMap.PlayerSpawn.X
 	playerStartY := gameMap.PlayerSpawn.Y
+
+	// Initialize and snap camera immediately to player spawn
+	playerIsoX, playerIsoY := WorldToIso(playerStartX, playerStartY)
+	g.camera = NewCamera()
+	g.camera.Snap(playerIsoX, playerIsoY)
 
 	playerMap.NewEntity(
 		&ecs.Player{
@@ -108,7 +114,9 @@ func (g *Game) Reset() {
 	g.world = w
 	g.gameMap = gameMap
 	g.updateSys = NewUpdateSystem(w, gameMap)
+	g.updateSys.camera = g.camera
 	g.drawSys = NewDrawSystem(w, gameMap)
+	g.drawSys.camera = g.camera
 }
 
 func (g *Game) Update() error {
@@ -147,11 +155,63 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return 1280, 720
 }
 
+// Camera represents an isometric camera with smooth exponential lerping towards a target position.
+type Camera struct {
+	X, Y             float64
+	TargetX, TargetY float64
+	LerpFactor       float64
+	Initialized      bool
+}
+
+func NewCamera() *Camera {
+	return &Camera{
+		LerpFactor: 0.10,
+	}
+}
+
+func (c *Camera) Snap(isoX, isoY float64) {
+	c.X = isoX
+	c.Y = isoY
+	c.TargetX = isoX
+	c.TargetY = isoY
+	c.Initialized = true
+}
+
+func (c *Camera) Update(targetIsoX, targetIsoY float64) {
+	c.TargetX = targetIsoX
+	c.TargetY = targetIsoY
+	if !c.Initialized {
+		c.Snap(targetIsoX, targetIsoY)
+		return
+	}
+	dx := c.TargetX - c.X
+	dy := c.TargetY - c.Y
+	if math.Hypot(dx, dy) < 0.01 {
+		c.X = c.TargetX
+		c.Y = c.TargetY
+		return
+	}
+	c.X += dx * c.LerpFactor
+	c.Y += dy * c.LerpFactor
+}
+
+func ScreenToIso(screenX, screenY, camX, camY float64) (isoX, isoY float64) {
+	isoX = camX + (screenX-640.0)/0.5
+	isoY = camY + (screenY-360.0)/0.5
+	return
+}
+
+func ScreenToWorld(screenX, screenY, camX, camY float64) (wx, wy float64) {
+	isoX, isoY := ScreenToIso(screenX, screenY, camX, camY)
+	return IsoToWorld(isoX, isoY)
+}
+
 // -- Systems --
 
 type UpdateSystem struct {
 	world   *arkecs.World
 	gameMap *world.Map
+	camera  *Camera
 	
 	playerFilter *arkecs.Filter3[ecs.Player, ecs.Position, ecs.Velocity]
 	zombieFilter *arkecs.Filter3[ecs.Zombie, ecs.Position, ecs.Velocity]
@@ -171,11 +231,15 @@ func NewUpdateSystem(w *arkecs.World, m *world.Map) *UpdateSystem {
 }
 
 func (s *UpdateSystem) Update() {
-	// Update FOV
+	// Update FOV & Camera
 	pq := s.playerFilter.Query()
 	for pq.Next() {
 		_, pPos, _ := pq.Get()
-		s.gameMap.CalculateFOV(pPos.X, pPos.Y, 15) // 15 tile vision radius
+		targetIsoX, targetIsoY := WorldToIso(pPos.X, pPos.Y)
+		if s.camera != nil {
+			s.camera.Update(targetIsoX, targetIsoY)
+		}
+		s.gameMap.CalculateFOV(pPos.X, pPos.Y, 22) // 22 tile vision radius
 	}
 
 	s.processItems()
@@ -354,13 +418,16 @@ func (s *UpdateSystem) processInputAndCombat() {
 			}
 
 			// Mouse Input
-			isoX, isoY := WorldToIso(pos.X, pos.Y)
-			camX := isoX - 400
-			camY := isoY - 300
+			camX := 0.0
+			camY := 0.0
+			if s.camera != nil {
+				camX = s.camera.X
+				camY = s.camera.Y
+			} else {
+				camX, camY = WorldToIso(pos.X, pos.Y)
+			}
 			mx, my := ebiten.CursorPosition()
-			mouseIsoX := float64(mx) + camX
-			mouseIsoY := float64(my) + camY
-			mouseWorldX, mouseWorldY := IsoToWorld(mouseIsoX, mouseIsoY)
+			mouseWorldX, mouseWorldY := ScreenToWorld(float64(mx), float64(my), camX, camY)
 
 			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 				dx := mouseWorldX - pos.X
@@ -736,6 +803,7 @@ func (s *UpdateSystem) processMovement() {
 type DrawSystem struct {
 	world      *arkecs.World
 	gameMap    *world.Map
+	camera     *Camera
 	itemFilter *arkecs.Filter2[ecs.Item, ecs.Position]
 }
 
@@ -797,13 +865,16 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		armorDurability = p.ArmorDurability
 		armorMaxDurability = p.ArmorMaxDurability
 		armorDefense = p.ArmorDefense
-		
-		isoX, isoY := WorldToIso(pPos.X, pPos.Y)
-		camX = isoX - 400
-		camY = isoY - 300
 	}
 
-	visionRadius := 1000.0
+	if s.camera != nil {
+		camX = s.camera.X
+		camY = s.camera.Y
+	} else {
+		camX, camY = WorldToIso(playerX, playerY)
+	}
+
+	visionRadius := 2200.0
 
 	// 2. Draw Ground Tiles
 	for y := 0; y < s.gameMap.Height; y++ {
@@ -828,11 +899,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			}
 
 			isoX, isoY := WorldToIso(worldX, worldY)
-			drawX := isoX - 128 - camX
-			drawY := isoY - 0 - camY
-
 			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(drawX, drawY)
+			op.GeoM.Translate(-128, 0)
+			op.GeoM.Translate(isoX-camX, isoY-camY)
+			op.GeoM.Scale(0.5, 0.5)
+			op.GeoM.Translate(640, 360)
 			
 			if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
 				op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
@@ -912,11 +983,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 					continue
 				}
 				
-				drawX := isoX - 128 - camX
-				drawY := isoY - 128 - camY
-
 				op := &ebiten.DrawImageOptions{}
-				op.GeoM.Translate(drawX, drawY)
+				op.GeoM.Translate(-128, -128)
+				op.GeoM.Translate(isoX-camX, isoY-camY)
+				op.GeoM.Scale(0.5, 0.5)
+				op.GeoM.Translate(640, 360)
 
 				if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
 					op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
@@ -951,11 +1022,12 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		}
 
 		isoX, isoY := WorldToIso(iPos.X, iPos.Y)
-		drawX := isoX - 32 - camX
-		drawY := isoY - 32 - camY
 
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(drawX, drawY)
+		op.GeoM.Translate(-32, -32)
+		op.GeoM.Translate(isoX-camX, isoY-camY)
+		op.GeoM.Scale(0.5, 0.5)
+		op.GeoM.Translate(640, 360)
 
 		img := assets.WeaponImage
 		switch item.Type {
@@ -1011,12 +1083,12 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		}
 
 		isoX, isoY := WorldToIso(pos.X, pos.Y)
-		
-		drawX := isoX - 32 - camX
-		drawY := isoY - 128 - camY
 
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(drawX, drawY)
+		op.GeoM.Translate(-32, -128)
+		op.GeoM.Translate(isoX-camX, isoY-camY)
+		op.GeoM.Scale(0.5, 0.5)
+		op.GeoM.Translate(640, 360)
 
 		img := assets.PlayerImage
 		
@@ -1058,11 +1130,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		targetY := playerY + playerFacingY*80.0
 		
 		isoX, isoY := WorldToIso(targetX, targetY)
-		drawX := isoX - 16 - camX
-		drawY := isoY - 16 - camY
 
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(drawX, drawY)
 		
 		// Semi-transparent indicator
 		if hasWeapon {
@@ -1077,9 +1146,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			op.ColorScale.Scale(1.0, 1.0, 0.0, 0.7)     // Yellow if shove
 		}
 
-		op.GeoM.Reset()
+		op.GeoM.Translate(-32, -64)
 		op.GeoM.Scale(0.5, 0.5)
-		op.GeoM.Translate(drawX, drawY)
+		op.GeoM.Translate(isoX-camX, isoY-camY)
+		op.GeoM.Scale(0.5, 0.5)
+		op.GeoM.Translate(640, 360)
 
 		sprites = append(sprites, Renderable{
 			Image: assets.PlayerImage,
@@ -1106,7 +1177,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	// alpha goes from 0.0 (noon) to 0.90 (midnight)
 	alpha := 0.45 + 0.45*math.Cos((timeOfDay/24.0)*math.Pi*2)
 	if alpha > 0.05 {
-		vector.DrawFilledRect(screen, 0, 0, 800, 600, color.RGBA{0, 0, 15, uint8(alpha * 255)}, false)
+		vector.DrawFilledRect(screen, 0, 0, 1280, 720, color.RGBA{0, 0, 15, uint8(alpha * 255)}, false)
 	}
 
 	// 6. UI Rendering
@@ -1234,16 +1305,23 @@ func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY f
 		s1x, s1y := WorldToIso(wp1X, wp1Y)
 		s2x, s2y := WorldToIso(wp2X, wp2Y)
 
+		screen0X := float32((s0x-camX)*0.5 + 640.0)
+		screen0Y := float32((s0y-camY)*0.5 + 360.0)
+		screen1X := float32((s1x-camX)*0.5 + 640.0)
+		screen1Y := float32((s1y-camY)*0.5 + 360.0)
+		screen2X := float32((s2x-camX)*0.5 + 640.0)
+		screen2Y := float32((s2y-camY)*0.5 + 360.0)
+
 		var arcPath vector.Path
-		arcPath.MoveTo(float32(s0x-camX), float32(s0y-camY))
-		arcPath.QuadTo(float32(s1x-camX), float32(s1y-camY), float32(s2x-camX), float32(s2y-camY))
+		arcPath.MoveTo(screen0X, screen0Y)
+		arcPath.QuadTo(screen1X, screen1Y, screen2X, screen2Y)
 
 		// Outer glow
 		outerColor := color.RGBA{R: 255, G: 140, B: 0, A: uint8(255 * alpha * 0.7)}
 		outerDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
 		outerDrawOpts.ColorScale.ScaleWithColor(outerColor)
 		vector.StrokePath(screen, &arcPath, &vector.StrokeOptions{
-			Width:    10.0,
+			Width:    5.0,
 			LineCap:  vector.LineCapRound,
 			LineJoin: vector.LineJoinRound,
 		}, outerDrawOpts)
@@ -1253,15 +1331,15 @@ func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY f
 		coreDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
 		coreDrawOpts.ColorScale.ScaleWithColor(coreColor)
 		vector.StrokePath(screen, &arcPath, &vector.StrokeOptions{
-			Width:    3.0,
+			Width:    1.5,
 			LineCap:  vector.LineCapRound,
 			LineJoin: vector.LineJoinRound,
 		}, coreDrawOpts)
 
 		// 2. Muzzle blast radial traces
 		pIsoX, pIsoY := WorldToIso(playerX, playerY)
-		pxScreen := float32(pIsoX - camX)
-		pyScreen := float32(pIsoY - camY)
+		pxScreen := float32((pIsoX-camX)*0.5 + 640.0)
+		pyScreen := float32((pIsoY-camY)*0.5 + 360.0)
 
 		numRays := 7
 		for i := 0; i < numRays; i++ {
@@ -1272,9 +1350,11 @@ func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY f
 			rxWorld := playerX + rayDist*math.Cos(rayAngle)
 			ryWorld := playerY + rayDist*math.Sin(rayAngle)
 			rxIso, ryIso := WorldToIso(rxWorld, ryWorld)
+			rxScreen := float32((rxIso-camX)*0.5 + 640.0)
+			ryScreen := float32((ryIso-camY)*0.5 + 360.0)
 
 			rayColor := color.RGBA{R: 255, G: 200, B: 50, A: uint8(255 * alpha * 0.6)}
-			vector.StrokeLine(screen, pxScreen, pyScreen, float32(rxIso-camX), float32(ryIso-camY), 2.5, rayColor, true)
+			vector.StrokeLine(screen, pxScreen, pyScreen, rxScreen, ryScreen, 1.5, rayColor, true)
 		}
 		return
 	}
@@ -1336,15 +1416,22 @@ func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY f
 	s1x, s1y := WorldToIso(p1x, p1y)
 	s2x, s2y := WorldToIso(p2x, p2y)
 
+	screen0X := float32((s0x-camX)*0.5 + 640.0)
+	screen0Y := float32((s0y-camY)*0.5 + 360.0)
+	screen1X := float32((s1x-camX)*0.5 + 640.0)
+	screen1Y := float32((s1y-camY)*0.5 + 360.0)
+	screen2X := float32((s2x-camX)*0.5 + 640.0)
+	screen2Y := float32((s2y-camY)*0.5 + 360.0)
+
 	var path vector.Path
-	path.MoveTo(float32(s0x-camX), float32(s0y-camY))
-	path.QuadTo(float32(s1x-camX), float32(s1y-camY), float32(s2x-camX), float32(s2y-camY))
+	path.MoveTo(screen0X, screen0Y)
+	path.QuadTo(screen1X, screen1Y, screen2X, screen2Y)
 
 	// Pass 1: Outer Glow
 	outerDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
 	outerDrawOpts.ColorScale.ScaleWithColor(outerColor)
 	vector.StrokePath(screen, &path, &vector.StrokeOptions{
-		Width:    outerWidth,
+		Width:    outerWidth * 0.5,
 		LineCap:  vector.LineCapRound,
 		LineJoin: vector.LineJoinRound,
 	}, outerDrawOpts)
@@ -1353,7 +1440,7 @@ func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY f
 	coreDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
 	coreDrawOpts.ColorScale.ScaleWithColor(coreColor)
 	vector.StrokePath(screen, &path, &vector.StrokeOptions{
-		Width:    coreWidth,
+		Width:    coreWidth * 0.5,
 		LineCap:  vector.LineCapRound,
 		LineJoin: vector.LineJoinRound,
 	}, coreDrawOpts)
