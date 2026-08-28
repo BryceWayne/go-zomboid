@@ -10,16 +10,34 @@ import (
 	"os"
 )
 
+const outDir = "internal/assets/images"
+
 func main() {
+	_ = os.MkdirAll(outDir, 0755)
+
 	generateEntity("player.png", color.RGBA{0, 255, 0, 255})
-	generateEntity("zombie.png", color.RGBA{255, 0, 0, 255})
-	generateEntity("runner.png", color.RGBA{255, 140, 0, 255}) // Dark orange
+	generateEntity("zombie.png", color.RGBA{0, 100, 0, 255})
+	generateEntity("runner.png", color.RGBA{150, 0, 0, 255})
+
+	generateWeapon("weapon.png")
+	generateItem("food.png", color.RGBA{255, 165, 0, 255}) // Orange food
+	generateItem("water.png", color.RGBA{0, 191, 255, 255}) // Blue water
+
 	generateIsoFloor("grass.png", color.RGBA{34, 139, 34, 255}, true)
 	generateIsoFloor("dirt.png", color.RGBA{139, 69, 19, 255}, true)
 	generateIsoFloor("wood.png", color.RGBA{205, 133, 63, 255}, true)
 	generateIsoWall("wall.png", color.RGBA{105, 105, 105, 255})
 	generateIsoTree("tree.png")
-	generateWeapon("weapon.png")
+}
+
+func generateItem(name string, c color.RGBA) {
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	for x := 4; x < 12; x++ {
+		for y := 4; y < 12; y++ {
+			img.Set(x, y, c)
+		}
+	}
+	saveImg(name, img)
 }
 
 func generateEntity(name string, baseColor color.RGBA) {

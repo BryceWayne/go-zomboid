@@ -23,6 +23,8 @@ var (
 	WoodImage   *ebiten.Image
 	TreeImage   *ebiten.Image
 	WeaponImage *ebiten.Image
+	FoodImage   *ebiten.Image
+	WaterImage  *ebiten.Image
 )
 
 func Load() {
@@ -35,6 +37,8 @@ func Load() {
 	WoodImage = loadEbitenImage("images/wood.png")
 	TreeImage = loadEbitenImage("images/tree.png")
 	WeaponImage = loadEbitenImage("images/weapon.png")
+	FoodImage = loadEbitenImage("images/food.png")
+	WaterImage = loadEbitenImage("images/water.png")
 }
 
 func loadEbitenImage(path string) *ebiten.Image {

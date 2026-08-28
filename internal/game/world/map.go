@@ -1,6 +1,9 @@
 package world
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 
 
@@ -32,6 +35,7 @@ func NewMap(width, height int) *Map {
 		Explored: make([]bool, width*height),
 	}
 	
+	// Fill with grass
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			if x == 0 || x == width-1 || y == 0 || y == height-1 {
@@ -42,33 +46,56 @@ func NewMap(width, height int) *Map {
 		}
 	}
 	
-	// Create a dirt road
-	for y := 5; y < height-5; y++ {
-		m.SetTile(20, y, TileDirt)
-		m.SetTile(21, y, TileDirt)
+	// Generate Roads (a cross pattern for a small town)
+	for y := 0; y < height; y++ {
+		m.SetTile(width/2, y, TileDirt)
+		m.SetTile(width/2-1, y, TileDirt)
+		m.SetTile(width/2+1, y, TileDirt)
+	}
+	for x := 0; x < width; x++ {
+		m.SetTile(x, height/2, TileDirt)
+		m.SetTile(x, height/2-1, TileDirt)
+		m.SetTile(x, height/2+1, TileDirt)
 	}
 
-	// Create a wooden house
-	for y := 10; y < 20; y++ {
-		for x := 10; x < 18; x++ {
-			if x == 10 || x == 17 || y == 10 || y == 19 {
-				if !(x == 17 && y == 15) { // Doorway
-					m.SetTile(x, y, TileWall)
+	// Helper to generate a house
+	buildHouse := func(hx, hy, hw, hh int) {
+		for y := hy; y < hy+hh; y++ {
+			for x := hx; x < hx+hw; x++ {
+				// Prevent overwriting map bounds
+				if x <= 0 || x >= width-1 || y <= 0 || y >= height-1 {
+					continue
+				}
+				if x == hx || x == hx+hw-1 || y == hy || y == hy+hh-1 {
+					// Add a door randomly on one wall
+					isDoor := (x == hx+hw/2 && y == hy+hh-1) // Bottom door
+					if isDoor {
+						m.SetTile(x, y, TileWoodFloor)
+					} else {
+						m.SetTile(x, y, TileWall)
+					}
 				} else {
 					m.SetTile(x, y, TileWoodFloor)
 				}
-			} else {
-				m.SetTile(x, y, TileWoodFloor)
 			}
 		}
 	}
+
+	// Generate houses in the 4 quadrants
+	buildHouse(10, 10, 10, 8)
+	buildHouse(30, 15, 8, 12)
+	buildHouse(60, 12, 12, 10)
+	buildHouse(75, 30, 10, 10)
 	
-	// Randomly spawn some trees
-	importRand := true
-	if importRand {
-		for i := 0; i < 40; i++ {
-			tx := 5 + (i * 7) % 35
-			ty := 5 + (i * 13) % 40
+	buildHouse(15, 60, 12, 8)
+	buildHouse(35, 70, 10, 10)
+	buildHouse(70, 65, 15, 12)
+
+	// Randomly spawn trees in grass areas
+	if width > 6 && height > 6 {
+		for i := 0; i < 150; i++ {
+			tx := 2 + rand.Intn(width-4)
+			ty := 2 + rand.Intn(height-4)
 			if m.GetTile(tx, ty) == TileGrass {
 				m.SetTile(tx, ty, TileTree)
 			}

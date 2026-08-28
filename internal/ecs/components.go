@@ -26,14 +26,17 @@ type Collider struct {
 }
 
 // Player marker component.
-type Player struct{
-	Infected       bool
+type Player struct {
 	Health         float64
-	Dead           bool
-	FacingX        float64
-	FacingY        float64
+	Hunger         float64 // 100.0 is full, 0.0 is starving
+	Thirst         float64 // 100.0 is hydrated, 0.0 is dehydrated
+	Inventory      []string
 	WeaponEquipped bool
 	AttackCooldown int
+	Dead           bool
+	Infected       bool
+	FacingX        float64
+	FacingY        float64
 }
 
 // Item marker component

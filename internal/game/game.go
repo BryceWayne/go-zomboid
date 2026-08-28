@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
@@ -31,16 +32,23 @@ func NewGame() *Game {
 
 func (g *Game) Reset() {
 	w := arkecs.NewWorld()
-	gameMap := world.NewMap(50, 50)
+	gameMap := world.NewMap(100, 100)
 
 	playerMap := arkecs.NewMap5[ecs.Player, ecs.Position, ecs.Velocity, ecs.Sprite, ecs.Collider](w)
 	zombieMap := arkecs.NewMap5[ecs.Zombie, ecs.Position, ecs.Velocity, ecs.Sprite, ecs.Collider](w)
 	itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](w)
 
-	// Create Player
+	// Create Player in center of map
 	playerMap.NewEntity(
-		&ecs.Player{Health: 100.0, FacingX: 1, FacingY: 0},
-		&ecs.Position{X: 100, Y: 100},
+		&ecs.Player{
+			Health:    100.0,
+			Hunger:    100.0,
+			Thirst:    100.0,
+			Inventory: []string{},
+			FacingX:   1, 
+			FacingY:   0,
+		},
+		&ecs.Position{X: 50 * float64(world.TileSize), Y: 50 * float64(world.TileSize)},
 		&ecs.Velocity{X: 0, Y: 0},
 		&ecs.Sprite{
 			Color: color.RGBA{R: 0, G: 255, B: 0, A: 255},
@@ -50,16 +58,17 @@ func (g *Game) Reset() {
 		&ecs.Collider{Width: 16, Height: 16},
 	)
 
-	// Create Weapons on map
-	for i := 0; i < 5; i++ {
+	// Create Items on map
+	itemTypes := []string{"weapon", "weapon", "weapon", "weapon", "weapon", "food", "food", "food", "food", "food", "food", "food", "food", "water", "water", "water", "water", "water", "water", "water"}
+	for _, t := range itemTypes {
 		itemMap.NewEntity(
-			&ecs.Item{Type: "weapon"},
-			&ecs.Position{X: float64(100 + rand.Intn(400)), Y: float64(100 + rand.Intn(400))},
+			&ecs.Item{Type: t},
+			&ecs.Position{X: float64(100 + rand.Intn(3000)), Y: float64(100 + rand.Intn(3000))},
 		)
 	}
 
 	// Create Zombies
-	for i := 0; i < 25; i++ {
+	for i := 0; i < 150; i++ {
 		isRunner := rand.Float64() < 0.2 // 20% chance to be a runner
 		speed := 1.0 + rand.Float64()*0.5
 		if isRunner {
@@ -72,7 +81,7 @@ func (g *Game) Reset() {
 				IsRunner:    isRunner,
 				WanderTimer: rand.Intn(120),
 			},
-			&ecs.Position{X: float64(200 + rand.Intn(800)), Y: float64(200 + rand.Intn(800))},
+			&ecs.Position{X: float64(100 + rand.Intn(3000)), Y: float64(100 + rand.Intn(3000))},
 			&ecs.Velocity{X: 0, Y: 0},
 			&ecs.Sprite{
 				Color: color.RGBA{R: 255, G: 0, B: 0, A: 255},
@@ -178,6 +187,12 @@ func (s *UpdateSystem) processItems() {
 		return
 	}
 
+	pMap := arkecs.NewMap1[ecs.Player](s.world)
+	player := pMap.Get(pEnt)
+	if player == nil || player.Dead {
+		return
+	}
+
 	var toRemove []arkecs.Entity
 	qItem := s.itemFilter.Query()
 	for qItem.Next() {
@@ -187,11 +202,8 @@ func (s *UpdateSystem) processItems() {
 		dx := pX - iPos.X
 		dy := pY - iPos.Y
 		if math.Sqrt(dx*dx + dy*dy) < 16.0 {
-			if item.Type == "weapon" {
-				pMap := arkecs.NewMap1[ecs.Player](s.world)
-				if player := pMap.Get(pEnt); player != nil {
-					player.WeaponEquipped = true
-				}
+			if len(player.Inventory) < 9 {
+				player.Inventory = append(player.Inventory, item.Type)
 				toRemove = append(toRemove, ent)
 			}
 		}
@@ -221,10 +233,73 @@ func (s *UpdateSystem) processInputAndCombat() {
 			}
 		}
 
+		// Drain Hunger and Thirst
+		if !player.Dead {
+			player.Hunger -= 0.003
+			player.Thirst -= 0.005
+			
+			if player.Hunger < 0 { player.Hunger = 0 }
+			if player.Thirst < 0 { player.Thirst = 0 }
+
+			if player.Hunger == 0 || player.Thirst == 0 {
+				player.Health -= 0.05
+				if player.Health <= 0 {
+					player.Dead = true
+				}
+			}
+		}
+
 		speed := 3.0
 		vel.X, vel.Y = 0, 0
 
 		if !player.Dead {
+			// Inventory Usage (Keys 1-9)
+			for i := ebiten.Key1; i <= ebiten.Key9; i++ {
+				if ebiten.IsKeyPressed(i) { // Or maybe just detect a tap, but let's use IsKeyPressed and just delete the item immediately. Wait, this will trigger multiple times if held.
+				}
+			}
+			
+			// A better way to handle inventory: Inpututil is standard for just pressed.
+			// However, since we don't have inpututil imported, we can do a simple loop and remove the item.
+			// Actually, inpututil is part of ebiten. Let's import it if we can, or just use a small cooldown or check.
+			// Let's just assume one tap removes it.
+			
+			// Let's implement inventory use
+			useItemIdx := -1
+			if ebiten.IsKeyPressed(ebiten.Key1) { useItemIdx = 0 }
+			if ebiten.IsKeyPressed(ebiten.Key2) { useItemIdx = 1 }
+			if ebiten.IsKeyPressed(ebiten.Key3) { useItemIdx = 2 }
+			if ebiten.IsKeyPressed(ebiten.Key4) { useItemIdx = 3 }
+			if ebiten.IsKeyPressed(ebiten.Key5) { useItemIdx = 4 }
+			if ebiten.IsKeyPressed(ebiten.Key6) { useItemIdx = 5 }
+			if ebiten.IsKeyPressed(ebiten.Key7) { useItemIdx = 6 }
+			if ebiten.IsKeyPressed(ebiten.Key8) { useItemIdx = 7 }
+			if ebiten.IsKeyPressed(ebiten.Key9) { useItemIdx = 8 }
+			
+			if useItemIdx >= 0 && useItemIdx < len(player.Inventory) && player.AttackCooldown <= 0 {
+				player.AttackCooldown = 30 // Small cooldown so it doesn't instantly consume everything if held
+				t := player.Inventory[useItemIdx]
+				
+				used := false
+				if t == "food" && player.Hunger < 100 {
+					player.Hunger += 50
+					if player.Hunger > 100 { player.Hunger = 100 }
+					used = true
+				} else if t == "water" && player.Thirst < 100 {
+					player.Thirst += 50
+					if player.Thirst > 100 { player.Thirst = 100 }
+					used = true
+				} else if t == "weapon" {
+					player.WeaponEquipped = true
+					used = true
+				}
+				
+				if used {
+					// Remove item from inventory
+					player.Inventory = append(player.Inventory[:useItemIdx], player.Inventory[useItemIdx+1:]...)
+				}
+			}
+
 			if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) {
 				vel.Y -= speed
 			}
@@ -424,6 +499,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	var playerX, playerY float64
 	var playerDead, playerInfected bool
 	var playerHealth float64
+	var playerHunger float64
+	var playerThirst float64
+	var playerInventory []string
 	var hasWeapon bool
 	var attackCooldown int
 	
@@ -434,6 +512,9 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		playerDead = p.Dead
 		playerInfected = p.Infected
 		playerHealth = p.Health
+		playerHunger = p.Hunger
+		playerThirst = p.Thirst
+		playerInventory = p.Inventory
 		hasWeapon = p.WeaponEquipped
 		attackCooldown = p.AttackCooldown
 		
@@ -545,7 +626,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	// Add items
 	qItem := s.itemFilter.Query()
 	for qItem.Next() {
-		_, iPos := qItem.Get()
+		item, iPos := qItem.Get()
 		
 		dx := iPos.X - playerX
 		dy := iPos.Y - playerY
@@ -568,8 +649,15 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(drawX, drawY)
 
+		img := assets.WeaponImage
+		if item.Type == "food" {
+			img = assets.FoodImage
+		} else if item.Type == "water" {
+			img = assets.WaterImage
+		}
+
 		sprites = append(sprites, Renderable{
-			Image: assets.WeaponImage,
+			Image: img,
 			Depth: iPos.X + iPos.Y,
 			Op:    op,
 		})
@@ -657,17 +745,44 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	hpWidth := float32(playerHealth / 100.0 * 200.0)
 	if hpWidth < 0 { hpWidth = 0 }
 	vector.DrawFilledRect(screen, 10, 10, hpWidth, 20, color.RGBA{0, 255, 0, 255}, false)
-	
 	ebitenutil.DebugPrintAt(screen, "Health", 15, 12)
 
+	// Hunger Bar
+	vector.DrawFilledRect(screen, 10, 35, 200, 15, color.RGBA{100, 50, 0, 255}, false)
+	hungerW := float32(playerHunger / 100.0 * 200.0)
+	if hungerW < 0 { hungerW = 0 }
+	vector.DrawFilledRect(screen, 10, 35, hungerW, 15, color.RGBA{255, 140, 0, 255}, false)
+	ebitenutil.DebugPrintAt(screen, "Hunger", 15, 35)
+
+	// Thirst Bar
+	vector.DrawFilledRect(screen, 10, 55, 200, 15, color.RGBA{0, 0, 100, 255}, false)
+	thirstW := float32(playerThirst / 100.0 * 200.0)
+	if thirstW < 0 { thirstW = 0 }
+	vector.DrawFilledRect(screen, 10, 55, thirstW, 15, color.RGBA{0, 191, 255, 255}, false)
+	ebitenutil.DebugPrintAt(screen, "Thirst", 15, 55)
+
 	if hasWeapon {
-		ebitenutil.DebugPrintAt(screen, "Weapon: EQUIPPED (Press SPACE to attack)", 10, 35)
+		ebitenutil.DebugPrintAt(screen, "Weapon: EQUIPPED (Press SPACE to attack)", 10, 75)
 	} else {
-		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Find a weapon on the map!)", 10, 35)
+		ebitenutil.DebugPrintAt(screen, "Weapon: NONE (Find a weapon on the map!)", 10, 75)
+	}
+
+	// Inventory UI
+	ebitenutil.DebugPrintAt(screen, "Inventory (Press 1-9 to use):", 550, 10)
+	for i := 0; i < 9; i++ {
+		// Draw slot background
+		y := 30 + (i * 25)
+		vector.DrawFilledRect(screen, 550, float32(y), 200, 20, color.RGBA{50, 50, 50, 200}, false)
+		
+		text := fmt.Sprintf("%d: [Empty]", i+1)
+		if i < len(playerInventory) {
+			text = fmt.Sprintf("%d: %s", i+1, playerInventory[i])
+		}
+		ebitenutil.DebugPrintAt(screen, text, 555, y+2)
 	}
 
 	if playerInfected && !playerDead {
-		ebitenutil.DebugPrintAt(screen, "INFECTED!", 10, 55)
+		ebitenutil.DebugPrintAt(screen, "INFECTED!", 10, 95)
 	}
 	if playerDead {
 		ebitenutil.DebugPrintAt(screen, "YOU DIED\n(Press 'R' to restart)", 350, 280)
