@@ -26,12 +26,14 @@ type Game struct {
 
 func NewGame() *Game {
 	assets.InitAudio()
-	g := &Game{timeOfDay: 12.0} // Start at noon
+	g := &Game{} 
 	g.Reset()
 	return g
 }
 
 func (g *Game) Reset() {
+	g.timeOfDay = 8.0 // Morning!
+
 	w := arkecs.NewWorld()
 	gameMap := world.NewMap(100, 100)
 
@@ -40,6 +42,9 @@ func (g *Game) Reset() {
 	itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](w)
 
 	// Create Player in center of map
+	playerStartX := 50.0 * float64(world.TileSize)
+	playerStartY := 50.0 * float64(world.TileSize)
+
 	playerMap.NewEntity(
 		&ecs.Player{
 			Health:    100.0,
@@ -49,7 +54,7 @@ func (g *Game) Reset() {
 			FacingX:   1, 
 			FacingY:   0,
 		},
-		&ecs.Position{X: 50 * float64(world.TileSize), Y: 50 * float64(world.TileSize)},
+		&ecs.Position{X: playerStartX, Y: playerStartY},
 		&ecs.Velocity{X: 0, Y: 0},
 		&ecs.Sprite{
 			Color: color.RGBA{R: 0, G: 255, B: 0, A: 255},
@@ -58,6 +63,11 @@ func (g *Game) Reset() {
 		},
 		&ecs.Collider{Width: 16, Height: 16},
 	)
+
+	// Guaranteed starting items near player
+	itemMap.NewEntity(&ecs.Item{Type: "weapon"}, &ecs.Position{X: playerStartX - 32, Y: playerStartY})
+	itemMap.NewEntity(&ecs.Item{Type: "food"}, &ecs.Position{X: playerStartX + 32, Y: playerStartY})
+	itemMap.NewEntity(&ecs.Item{Type: "water"}, &ecs.Position{X: playerStartX, Y: playerStartY + 32})
 
 	// Create Items on map
 	itemTypes := []string{"weapon", "weapon", "weapon", "weapon", "weapon", "food", "food", "food", "food", "food", "food", "food", "food", "water", "water", "water", "water", "water", "water", "water"}
@@ -76,13 +86,23 @@ func (g *Game) Reset() {
 			speed = 2.8 + rand.Float64()*0.5
 		}
 
+		// Keep zombies a bit away from spawn
+		var zx, zy float64
+		for {
+			zx = float64(100 + rand.Intn(3000))
+			zy = float64(100 + rand.Intn(3000))
+			if math.Sqrt((zx-playerStartX)*(zx-playerStartX) + (zy-playerStartY)*(zy-playerStartY)) > 300 {
+				break
+			}
+		}
+
 		zombieMap.NewEntity(
 			&ecs.Zombie{
 				Speed:       speed,
 				IsRunner:    isRunner,
 				WanderTimer: rand.Intn(120),
 			},
-			&ecs.Position{X: float64(100 + rand.Intn(3000)), Y: float64(100 + rand.Intn(3000))},
+			&ecs.Position{X: zx, Y: zy},
 			&ecs.Velocity{X: 0, Y: 0},
 			&ecs.Sprite{
 				Color: color.RGBA{R: 255, G: 0, B: 0, A: 255},
@@ -100,8 +120,8 @@ func (g *Game) Reset() {
 }
 
 func (g *Game) Update() error {
-	// Advance time: 1 in-game hour per 2.5 seconds (150 frames) => 24 hours per 1 real minute
-	g.timeOfDay += 24.0 / 3600.0
+	// Advance time: Extended day cycle! 5 real minutes for 24 hours. (24 / (60 * 5 * 60 frames))
+	g.timeOfDay += 24.0 / (60.0 * 5.0 * 60.0) 
 	if g.timeOfDay >= 24.0 {
 		g.timeOfDay -= 24.0
 	}
