@@ -1,58 +1,120 @@
-# Challenger Verification Report: Milestone 1 (Procedural Sprite Enhancements)
+# Handoff Report — Milestone 1 (Asset Pipeline 4x Scaling Empirical Challenge)
+
+**Reviewer**: `m1_challenger_1` (Empirical Challenger: Critic / Specialist)
+**Working Directory**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_1`
+**Verdict**: **FAIL**
+
+---
 
 ## 1. Observation
-1. **Asset Generation Command**:
-   - Command: `go run ./cmd/tools/genassets`
-   - Exit code: 0
-   - Generated 20 PNG asset files into `internal/assets/images/`:
-     - **Characters (16x32)**: `player.png`, `zombie.png`, `runner.png`
-     - **Floor diamonds (64x32)**: `grass.png`, `dirt.png`, `wood.png`, `asphalt.png`, `concrete.png`, `tile_floor.png`
-     - **Vertical blocks (64x64)**: `wall.png`, `tree.png`, `fence.png`, `debris.png`
-     - **Items/equipment (16x16)**: `food.png`, `water.png`, `weapon.png`, `axe.png`, `shotgun.png`, `ammo.png`, `armor.png`
 
-2. **Pixel Integrity, Dimensions & Transparency Metrics**:
-   - `player.png` (16x32): 341 opaque pixels, 8 semi-transparent shadow pixels, 163 transparent background pixels (68.2% fill). Bounding box [1,0]->[14,31]. Feet grounded in row 31.
-   - `zombie.png` (16x32): 325 opaque pixels, 8 semi-transparent shadow pixels, 179 transparent background pixels (65.0% fill). Bounding box [1,0]->[15,31].
-   - `runner.png` (16x32): 375 opaque pixels, 10 semi-transparent shadow pixels, 127 transparent background pixels (75.2% fill). Bounding box [0,1]->[15,31].
-   - Floor tiles (`grass.png`, `dirt.png`, `wood.png`, `asphalt.png`, `concrete.png`, `tile_floor.png`) (64x32): Each has exactly 1,024 non-transparent pixels (50.0% coverage) and exactly 1,024 transparent pixels, conforming to the 2:1 isometric diamond formula `|x-31.5|/32 + |y-15.5|/16 <= 1.0` with 0 out-of-bounds bleed pixels.
-   - Vertical blocks (`wall.png`, `tree.png`, `fence.png`, `debris.png`) (64x64): Decoded with valid dimensions, multi-tier geometry, shading, and transparent surroundings.
-   - Items (`food.png`, `water.png`, `weapon.png`, `axe.png`, `shotgun.png`, `ammo.png`, `armor.png`) (16x16): Decoded with 16x16 bounds, 50-146 solid pixels, clear dark contour outlines, and transparent backgrounds.
+1. **Test Execution Command & Failure Output**:
+   Command run: `CC=gcc go test -p 1 -v -count=1 ./internal/assets/... ./cmd/tools/genassets/...`
+   Verbatim output from `TestEmpiricalFloorDiamondGeometry`:
+   ```
+   === RUN   TestEmpiricalFloorDiamondGeometry
+   === RUN   TestEmpiricalFloorDiamondGeometry/images/grass.png
+   === RUN   TestEmpiricalFloorDiamondGeometry/images/dirt.png
+       empirical_challenger_test.go:226: Inner hole at (153, 30): RGBA=(0, 0, 0, 45) [isoDist=0.723]
+       empirical_challenger_test.go:226: Inner hole at (152, 31): RGBA=(0, 0, 0, 45) [isoDist=0.699]
+       empirical_challenger_test.go:226: Inner hole at (153, 31): RGBA=(0, 0, 0, 45) [isoDist=0.707]
+       empirical_challenger_test.go:226: Inner hole at (152, 32): RGBA=(0, 0, 0, 45) [isoDist=0.684]
+       empirical_challenger_test.go:226: Inner hole at (153, 32): RGBA=(0, 0, 0, 45) [isoDist=0.691]
+       empirical_challenger_test.go:235: images/dirt.png has 18 non-transparent pixels outside isometric diamond (isoDist > 1.0)
+       empirical_challenger_test.go:242: images/dirt.png has 151 transparent/semi-transparent pixels inside solid core (isoDist <= 0.85)
+   --- FAIL: TestEmpiricalFloorDiamondGeometry (0.00s)
+       --- PASS: TestEmpiricalFloorDiamondGeometry/images/grass.png (0.00s)
+       --- FAIL: TestEmpiricalFloorDiamondGeometry/images/dirt.png (0.00s)
+       --- PASS: TestEmpiricalFloorDiamondGeometry/images/wood.png (0.00s)
+       --- PASS: TestEmpiricalFloorDiamondGeometry/images/asphalt.png (0.00s)
+       --- PASS: TestEmpiricalFloorDiamondGeometry/images/concrete.png (0.00s)
+       --- PASS: TestEmpiricalFloorDiamondGeometry/images/tile_floor.png (0.00s)
+   FAIL
+   FAIL	github.com/BryceWayne/go-zomboid/internal/assets	0.032s
+   ```
 
-3. **Deterministic Generation**:
-   - Ran `genassets` over 3 consecutive cycles.
-   - SHA256 checksums across all 20 image files matched initial hashes identically on every cycle (e.g., `player.png` = `938b812f86...`, `grass.png` = `122cbf3df2...`).
+2. **Source Code Implementation in `cmd/tools/genassets/main.go`**:
+   - Lines 250–265:
+     ```go
+     func drawVectorPebble(img *image.RGBA, cx, cy int, rx, ry float64, base, light, shadow color.RGBA) {
+         dropShadow := color.RGBA{0, 0, 0, 45}
+         // Drop shadow
+         minY := int(math.Floor(float64(cy+2) - ry))
+         maxY := int(math.Ceil(float64(cy+2) + ry))
+         minX := int(math.Floor(float64(cx+2) - rx))
+         maxX := int(math.Ceil(float64(cx+2) + rx))
+         for y := minY; y <= maxY; y++ {
+             for x := minX; x <= maxX; x++ {
+                 dx := float64(x-(cx+2)) / rx
+                 dy := float64(y-(cy+2)) / ry
+                 if dx*dx+dy*dy <= 1.0 {
+                     setPixel(img, x, y, dropShadow)
+                 }
+             }
+         }
+     ```
+   - Lines 666–671:
+     ```go
+     // 4x Scaled rounded vector pebbles (~14x8px)
+     pebbles := [][2]int{
+         {80, 40}, {180, 56}, {120, 88}, {60, 80}, {195, 36}, {145, 30},
+     }
+     for _, pos := range pebbles {
+         drawVectorPebble(img, pos[0], pos[1], 7.0, 4.0, pebbleBase, pebbleLight, pebbleShadow)
+     }
+     ```
 
-4. **Asset Embedding & Interface Contract**:
-   - `internal/assets/assets.go` defines and embeds all 20 assets via `embed.FS`.
-   - `assets.Load()` successfully loads all 20 `*ebiten.Image` global handles.
+3. **Asset Dimensions and Determinism Measurements**:
+   - All 27 assets in `internal/assets/images/*.png` match required dimensions:
+     - 6 Floors: 256x128
+     - 10 Obstacles/Props: 256x256
+     - 3 Entities: 64x128
+     - 8 Items: 64x64
+   - Character entities possess solid grounding pixels in rows 112..127 (`player.png`: 559 px / 272 solid; `zombie.png`: 525 px / 238 solid; `runner.png`: 615 px / 276 solid).
+   - Asset regeneration is 100% deterministic (identical SHA-256 hashes across consecutive runs of `cmd/tools/genassets`).
 
-5. **Test Suite Execution**:
-   - Command: `CC=gcc go test -v ./...`
-   - Result: All test suites passed (`cmd/tools/genassets`, `internal/assets`, `internal/game`, `internal/game/world`).
+---
 
 ## 2. Logic Chain
-- Step 1: `cmd/tools/genassets/main.go` implements 20 deterministic procedural generator functions using seeded PRNGs and matrix stamp maps.
-- Step 2: Running `go run ./cmd/tools/genassets` produces all 20 required image assets without external graphical file dependencies.
-- Step 3: Decoding each generated PNG confirms that dimensions match the specification (16x32 for entities, 64x32 for floor tiles, 64x64 for vertical props, 16x16 for items).
-- Step 4: Spatial analysis of floor diamond pixels proves exact conformity to the 2:1 isometric grid geometry with zero pixel bleed into adjacent tiles.
-- Step 5: `internal/assets/assets.go` embeds and exposes all 20 textures as package-level `*ebiten.Image` pointers, validated by unit and idempotency tests.
-- Step 6: `CC=gcc go test -v ./...` passes all unit and stress tests without errors or race conditions.
+
+1. From Observation 2 (lines 250–265), `drawVectorPebble` defines `dropShadow` as `color.RGBA{0, 0, 0, 45}` and calls `setPixel(img, x, y, dropShadow)`.
+2. `setPixel` performs a direct unblended assignment `img.SetRGBA(x, y, c)`. When applied to the dirt tile base, it replaces the fully opaque ground color `(151, 103, 81, 255)` with `(0, 0, 0, 45)`.
+3. Because the pebble body (`normDist <= 1.0` centered at `(cx, cy)`) is offset by `(-2, -2)` from the shadow (`(cx+2, cy+2)`), unoccluded shadow pixels are not painted over by the opaque pebble body.
+4. From Observation 1, this directly results in **151 pixels with alpha = 45** inside the solid diamond core of `images/dirt.png`, punching translucent holes in the ground sprite.
+5. From Observation 2 (lines 666–671), pebble 5 is placed at `cx = 195, cy = 36` with radii $r_x = 7.0, r_y = 4.0$. At $x = 202, y = 36$, the normalized distance is $\frac{|202 - 127.5|}{128} + \frac{|36 - 63.5|}{64} = 0.5820 + 0.4297 = 1.0117 > 1.0$.
+6. Because `drawVectorPebble` lacks diamond boundary clipping, this directly causes **18 non-transparent pixels to bleed outside the 2:1 isometric diamond boundary** into the transparent upper-right corner.
+7. Consequently, `images/dirt.png` fails floor tile geometric and alpha integrity contracts, leading to verdict **FAIL**.
+
+---
 
 ## 3. Caveats
-- Audio playback (`internal/assets/audio.go`) generates procedural PCM audio buffers headlessly; full real-time audio playback through ALSA/PulseAudio hardware was not tested since headless CI environment lacks physical audio output devices.
-- Interactive live window rendering (displaying sprites on screen at 60 FPS) is scoped for the Milestone 5 end-to-end game loop test.
+
+- Milestone 1 verification focuses strictly on asset generation (`cmd/tools/genassets`), embedded assets (`internal/assets`), and image mathematical geometry. Subsequent milestones (M2 engine coordinate math and M3 Bezier combat curves) were not evaluated in this handoff.
+- The existing test `TestFloorTileIsometricBounds` in `internal/assets/assets_stress_test.go` did not catch the pebble bleed because its tolerance was set too loosely (`dist > 1.15`).
+
+---
 
 ## 4. Conclusion
-Milestone 1 implementation strictly satisfies all requirements and interface contracts defined in `PROJECT.md` and `ORIGINAL_REQUEST.md`. Sprite generation is high quality, mathematically compliant with isometric 2:1 projection, deterministic, and fully covered by tests.
 
-**Verdict: APPROVE**
+Milestone 1 is **FAILED** due to two reproducible defects in `cmd/tools/genassets/main.go` affecting `images/dirt.png`:
+1. `drawVectorPebble` calling `setPixel` with semi-transparent `dropShadow` instead of `blendPixel`, creating 151 alpha=45 holes.
+2. Pebble `{195, 36}` causing 18 pixels to bleed across the isometric diamond boundary ($isoDist > 1.0$).
+
+**Action Required from Implementer**:
+1. In `cmd/tools/genassets/main.go:262`, change `setPixel(img, x, y, dropShadow)` to `blendPixel(img, x, y, dropShadow)`.
+2. In `cmd/tools/genassets/main.go:667`, adjust the pebble coordinate `{195, 36}` inward (e.g. `{185, 42}`) or enforce $isoDist \le 0.92$ clipping.
+3. Re-run `go run ./cmd/tools/genassets` to regenerate the sprite files.
+
+---
 
 ## 5. Verification Method
-To independently reproduce these empirical findings:
-```bash
-# 1. Regenerate all procedural assets
-go run ./cmd/tools/genassets
 
-# 2. Run the complete test suite including asset integrity tests
-CC=gcc go test -count=1 -v ./...
+To independently reproduce the failure and verify fixes:
+```bash
+# 1. Run the empirical challenger test suite
+CC=gcc go test -p 1 -v -count=1 -run TestEmpiricalFloorDiamondGeometry ./internal/assets/...
+
+# 2. Run the full project test suite
+CC=gcc go test -p 1 ./...
 ```
+Expected invalidation condition for this FAIL verdict: When the above commands exit with code 0 and `TestEmpiricalFloorDiamondGeometry/images/dirt.png` passes with 0 bleeding pixels and 0 punctured alpha pixels.

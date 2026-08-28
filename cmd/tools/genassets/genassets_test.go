@@ -18,33 +18,40 @@ var expectedAssetFiles = []struct {
 	height int
 	isIso  bool
 }{
-	// Character Entities (16x32)
-	{"player.png", 16, 32, false},
-	{"zombie.png", 16, 32, false},
-	{"runner.png", 16, 32, false},
+	// Character Entities (64x128)
+	{"player.png", 64, 128, false},
+	{"zombie.png", 64, 128, false},
+	{"runner.png", 64, 128, false},
 
-	// Floor Tiles (64x32)
-	{"grass.png", 64, 32, true},
-	{"dirt.png", 64, 32, true},
-	{"wood.png", 64, 32, true},
-	{"asphalt.png", 64, 32, true},
-	{"concrete.png", 64, 32, true},
-	{"tile_floor.png", 64, 32, true},
+	// Floor Tiles (256x128)
+	{"grass.png", 256, 128, true},
+	{"dirt.png", 256, 128, true},
+	{"wood.png", 256, 128, true},
+	{"asphalt.png", 256, 128, true},
+	{"concrete.png", 256, 128, true},
+	{"tile_floor.png", 256, 128, true},
 
-	// Vertical Obstacles (64x64)
-	{"wall.png", 64, 64, false},
-	{"tree.png", 64, 64, false},
-	{"fence.png", 64, 64, false},
-	{"debris.png", 64, 64, false},
+	// Vertical Obstacles & Props (256x256)
+	{"wall.png", 256, 256, false},
+	{"tree.png", 256, 256, false},
+	{"fence.png", 256, 256, false},
+	{"debris.png", 256, 256, false},
+	{"tent.png", 256, 256, false},
+	{"stump.png", 256, 256, false},
+	{"mushroom.png", 256, 256, false},
+	{"sign.png", 256, 256, false},
+	{"elevation_block.png", 256, 256, false},
+	{"elevation_ramp.png", 256, 256, false},
 
-	// Items & Equipment (16x16)
-	{"food.png", 16, 16, false},
-	{"water.png", 16, 16, false},
-	{"weapon.png", 16, 16, false},
-	{"axe.png", 16, 16, false},
-	{"shotgun.png", 16, 16, false},
-	{"ammo.png", 16, 16, false},
-	{"armor.png", 16, 16, false},
+	// Items & Equipment (64x64)
+	{"food.png", 64, 64, false},
+	{"water.png", 64, 64, false},
+	{"weapon.png", 64, 64, false},
+	{"axe.png", 64, 64, false},
+	{"shotgun.png", 64, 64, false},
+	{"ammo.png", 64, 64, false},
+	{"armor.png", 64, 64, false},
+	{"antidote.png", 64, 64, false},
 }
 
 func getFileHash(t *testing.T, path string) string {
@@ -114,8 +121,8 @@ func TestAssetDimensionsAndIntegrity(t *testing.T) {
 	projRoot := getProjectRoot(t)
 	assetsDir := filepath.Join(projRoot, "internal/assets/images")
 
-	if len(expectedAssetFiles) != 20 {
-		t.Fatalf("expected 20 assets to be registered, found %d", len(expectedAssetFiles))
+	if len(expectedAssetFiles) != 27 {
+		t.Fatalf("expected 27 assets to be registered, found %d", len(expectedAssetFiles))
 	}
 
 	for _, tc := range expectedAssetFiles {

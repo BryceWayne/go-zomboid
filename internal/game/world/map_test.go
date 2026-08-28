@@ -144,8 +144,8 @@ func TestPlayerSafeSpawn(t *testing.T) {
 		dx := zs.X - m.PlayerSpawn.X
 		dy := zs.Y - m.PlayerSpawn.Y
 		dist := math.Sqrt(dx*dx + dy*dy)
-		if dist < 350.0 {
-			t.Errorf("Zombie spawn %d (%f, %f) is too close to player spawn (%f, %f): dist=%f < 350",
+		if dist < 1400.0 {
+			t.Errorf("Zombie spawn %d (%f, %f) is too close to player spawn (%f, %f): dist=%f < 1400",
 				i, zs.X, zs.Y, m.PlayerSpawn.X, m.PlayerSpawn.Y, dist)
 		}
 	}
@@ -206,39 +206,39 @@ func TestCollisionDetection(t *testing.T) {
 	}
 
 	// Test non-solid grass
-	if m.IsColliding(64, 64, 16, 16) {
+	if m.IsColliding(256, 256, 64, 64) {
 		t.Errorf("Expected no collision on grass")
 	}
 
-	// Test solid wall at (2,2) -> (64,64) to (95,95)
+	// Test solid wall at (2,2) -> (256,256) to (383,383)
 	m.SetTile(2, 2, TileWall)
-	if !m.IsColliding(60, 60, 10, 10) {
+	if !m.IsColliding(240, 240, 40, 40) {
 		t.Errorf("Expected collision overlapping TileWall")
 	}
 
-	// Test solid tree at (4,4)
+	// Test solid tree at (4,4) -> (512, 512)
 	m.SetTile(4, 4, TileTree)
-	if !m.IsColliding(128, 128, 16, 16) {
+	if !m.IsColliding(512, 512, 64, 64) {
 		t.Errorf("Expected collision on TileTree")
 	}
 
-	// Test solid fence at (6,6)
+	// Test solid fence at (6,6) -> (768, 768)
 	m.SetTile(6, 6, TileFence)
-	if !m.IsColliding(192, 192, 16, 16) {
+	if !m.IsColliding(768, 768, 64, 64) {
 		t.Errorf("Expected collision on TileFence")
 	}
 
-	// Test solid debris at (8,8)
+	// Test solid debris at (8,8) -> (1024, 1024)
 	m.SetTile(8, 8, TileDebris)
-	if !m.IsColliding(256, 256, 16, 16) {
+	if !m.IsColliding(1024, 1024, 64, 64) {
 		t.Errorf("Expected collision on TileDebris")
 	}
 
 	// Out of bounds collision
-	if !m.IsColliding(-10, -10, 16, 16) {
+	if !m.IsColliding(-10, -10, 64, 64) {
 		t.Errorf("Expected collision out of bounds negative")
 	}
-	if !m.IsColliding(2000, 2000, 16, 16) {
+	if !m.IsColliding(8000, 8000, 64, 64) {
 		t.Errorf("Expected collision out of bounds positive")
 	}
 }
@@ -255,7 +255,7 @@ func TestFOVAndOcclusion(t *testing.T) {
 	m.SetTile(10, 15, TileFence)
 
 	// Calculate FOV from (10, 10)
-	m.CalculateFOV(10.0*TileSize+16, 10.0*TileSize+16, 10)
+	m.CalculateFOV(10.0*TileSize+64, 10.0*TileSize+64, 10)
 
 	// Player tile must be visible
 	if !m.Visible[10*m.Width+10] {

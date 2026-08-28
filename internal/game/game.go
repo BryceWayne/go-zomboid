@@ -59,10 +59,10 @@ func (g *Game) Reset() {
 		&ecs.Velocity{X: 0, Y: 0},
 		&ecs.Sprite{
 			Color: color.RGBA{R: 0, G: 255, B: 0, A: 255},
-			W:     16,
-			H:     16,
+			W:     64,
+			H:     128,
 		},
-		&ecs.Collider{Width: 16, Height: 16},
+		&ecs.Collider{Width: 64, Height: 64},
 	)
 
 	// Spawn contextual loot items from map
@@ -77,9 +77,9 @@ func (g *Game) Reset() {
 	// Spawn zombies from pre-validated non-colliding coordinates
 	for _, zs := range gameMap.ZombieSpawns {
 		isRunner := rand.Float64() < 0.2 // 20% chance to be a runner
-		speed := 1.0 + rand.Float64()*0.5
+		speed := 4.0 + rand.Float64()*2.0
 		if isRunner {
-			speed = 2.2 + rand.Float64()*0.4
+			speed = 8.8 + rand.Float64()*1.6
 		}
 
 		zombieMap.NewEntity(
@@ -92,10 +92,10 @@ func (g *Game) Reset() {
 			&ecs.Velocity{X: 0, Y: 0},
 			&ecs.Sprite{
 				Color: color.RGBA{R: 255, G: 0, B: 0, A: 255},
-				W:     16,
-				H:     16,
+				W:     64,
+				H:     128,
 			},
-			&ecs.Collider{Width: 16, Height: 16},
+			&ecs.Collider{Width: 64, Height: 64},
 		)
 	}
 
@@ -208,7 +208,7 @@ func (s *UpdateSystem) processItems() {
 		
 		dx := pX - iPos.X
 		dy := pY - iPos.Y
-		if math.Sqrt(dx*dx + dy*dy) < 16.0 {
+		if math.Sqrt(dx*dx + dy*dy) < 64.0 {
 			if len(player.Inventory) < 9 {
 				player.Inventory = append(player.Inventory, item.Type)
 				toRemove = append(toRemove, ent)
@@ -260,7 +260,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 			}
 		}
 
-		speed := 3.0
+		speed := 12.0
 		vel.X, vel.Y = 0, 0
 
 		if !player.Dead {
@@ -429,8 +429,8 @@ func (s *UpdateSystem) processInputAndCombat() {
 							facingY /= facingLen
 						}
 
-						// Shotgun Spread Cone (Range: 160px, Angle: +-22.5 degrees, Point-blank < 24px)
-						const maxShotgunRange = 160.0
+						// Shotgun Spread Cone (Range: 640px, Angle: +-22.5 degrees, Point-blank < 96px)
+						const maxShotgunRange = 640.0
 						const cosSpread = 0.9238795325112867
 
 						zQuery := s.zombieFilter.Query()
@@ -443,7 +443,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 							dist := math.Hypot(dx, dy)
 
 							if dist <= maxShotgunRange {
-								if dist < 24.0 {
+								if dist < 96.0 {
 									// Point-blank kill
 									toRemoveZombies = append(toRemoveZombies, ent)
 								} else {
@@ -455,13 +455,13 @@ func (s *UpdateSystem) processInputAndCombat() {
 							}
 						}
 
-						// Acoustic Noise Pulse: Alerts all wandering zombies within 400.0px
+						// Acoustic Noise Pulse: Alerts all wandering zombies within 1600.0px
 						noiseQuery := s.zombieFilter.Query()
 						for noiseQuery.Next() {
 							z, zPos, _ := noiseQuery.Get()
 							zdx := pos.X - zPos.X
 							zdy := pos.Y - zPos.Y
-							if math.Hypot(zdx, zdy) <= 400.0 {
+							if math.Hypot(zdx, zdy) <= 1600.0 {
 								z.Chasing = true
 								z.WanderTimer = 0
 							}
@@ -470,24 +470,24 @@ func (s *UpdateSystem) processInputAndCombat() {
 						// Dry Fire / Out of Ammo: Mechanical click & defensive butt shove
 						assets.PlaySound(assets.ShoveSound)
 
-						attackX := pos.X + player.FacingX*24.0
-						attackY := pos.Y + player.FacingY*24.0
+						attackX := pos.X + player.FacingX*96.0
+						attackY := pos.Y + player.FacingY*96.0
 						zQuery := s.zombieFilter.Query()
 						for zQuery.Next() {
 							z, zPos, zVel := zQuery.Get()
 							dx := attackX - zPos.X
 							dy := attackY - zPos.Y
-							if math.Hypot(dx, dy) < 24.0 {
+							if math.Hypot(dx, dy) < 96.0 {
 								z.StunTimer = 45
-								zVel.X = player.FacingX * 5.0
-								zVel.Y = player.FacingY * 5.0
+								zVel.X = player.FacingX * 20.0
+								zVel.Y = player.FacingY * 20.0
 							}
 						}
 					}
 				} else if player.WeaponEquipped && player.WeaponType == "axe" {
-					// Fire Axe Melee Attack: Cleave reach 32.0px, radius 32.0px
-					attackX := pos.X + player.FacingX*32.0
-					attackY := pos.Y + player.FacingY*32.0
+					// Fire Axe Melee Attack: Cleave reach 128.0px, radius 128.0px
+					attackX := pos.X + player.FacingX*128.0
+					attackY := pos.Y + player.FacingY*128.0
 					hitZombies := false
 
 					zQuery := s.zombieFilter.Query()
@@ -497,7 +497,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 
 						dx := attackX - zPos.X
 						dy := attackY - zPos.Y
-						if math.Hypot(dx, dy) < 32.0 {
+						if math.Hypot(dx, dy) < 128.0 {
 							hitZombies = true
 							toRemoveZombies = append(toRemoveZombies, ent)
 						}
@@ -515,9 +515,9 @@ func (s *UpdateSystem) processInputAndCombat() {
 						assets.PlaySound(assets.ShoveSound)
 					}
 				} else if player.WeaponEquipped {
-					// Standard Melee Attack (Bat/Club): Reach 24.0px, radius 24.0px
-					attackX := pos.X + player.FacingX*24.0
-					attackY := pos.Y + player.FacingY*24.0
+					// Standard Melee Attack (Bat/Club): Reach 96.0px, radius 96.0px
+					attackX := pos.X + player.FacingX*96.0
+					attackY := pos.Y + player.FacingY*96.0
 					hitZombies := false
 
 					zQuery := s.zombieFilter.Query()
@@ -527,7 +527,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 
 						dx := attackX - zPos.X
 						dy := attackY - zPos.Y
-						if math.Hypot(dx, dy) < 24.0 {
+						if math.Hypot(dx, dy) < 96.0 {
 							hitZombies = true
 							toRemoveZombies = append(toRemoveZombies, ent)
 						}
@@ -545,19 +545,19 @@ func (s *UpdateSystem) processInputAndCombat() {
 						assets.PlaySound(assets.ShoveSound)
 					}
 				} else {
-					// Unarmed Shove
-					attackX := pos.X + player.FacingX*24.0
-					attackY := pos.Y + player.FacingY*24.0
+					// Unarmed Shove: Reach 96.0px, radius 96.0px
+					attackX := pos.X + player.FacingX*96.0
+					attackY := pos.Y + player.FacingY*96.0
 
 					zQuery := s.zombieFilter.Query()
 					for zQuery.Next() {
 						z, zPos, zVel := zQuery.Get()
 						dx := attackX - zPos.X
 						dy := attackY - zPos.Y
-						if math.Hypot(dx, dy) < 24.0 {
+						if math.Hypot(dx, dy) < 96.0 {
 							z.StunTimer = 45
-							zVel.X = player.FacingX * 5.0
-							zVel.Y = player.FacingY * 5.0
+							zVel.X = player.FacingX * 20.0
+							zVel.Y = player.FacingY * 20.0
 						}
 					}
 					assets.PlaySound(assets.ShoveSound)
@@ -591,11 +591,11 @@ func (s *UpdateSystem) processZombies() {
 		return
 	}
 
-	noiseRadius := 50.0
+	noiseRadius := 200.0
 	if playerMoving {
-		noiseRadius = 200.0
+		noiseRadius = 800.0
 	}
-	visionRadius := 150.0
+	visionRadius := 600.0
 	if playerDead {
 		noiseRadius, visionRadius = 0, 0 
 	}
@@ -612,8 +612,8 @@ func (s *UpdateSystem) processZombies() {
 		others = append(others, zombieData{id: qGather.Entity(), pos: pos})
 	}
 
-	separationRadius := 20.0
-	separationForce := 2.0
+	separationRadius := 80.0
+	separationForce := 8.0
 
 	query := s.zombieFilter.Query()
 	for query.Next() {
@@ -634,7 +634,7 @@ func (s *UpdateSystem) processZombies() {
 		}
 
 		// Infection Check & Armor Deflection
-		if dist < 14.0 && !playerDead {
+		if dist < 56.0 && !playerDead {
 			pMap := arkecs.NewMap1[ecs.Player](s.world)
 			if playerComp := pMap.Get(playerEnt); playerComp != nil {
 				if playerComp.ArmorEquipped {
@@ -667,7 +667,7 @@ func (s *UpdateSystem) processZombies() {
 
 		if dist < noiseRadius || dist < visionRadius {
 			zombie.Chasing = true
-		} else if dist > 400.0 || playerDead { 
+		} else if dist > 1600.0 || playerDead { 
 			zombie.Chasing = false
 		}
 
@@ -797,7 +797,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		camY = isoY - 300
 	}
 
-	visionRadius := 250.0
+	visionRadius := 1000.0
 
 	// 2. Draw Ground Tiles
 	for y := 0; y < s.gameMap.Height; y++ {
@@ -822,7 +822,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			}
 
 			isoX, isoY := WorldToIso(worldX, worldY)
-			drawX := isoX - 32 - camX
+			drawX := isoX - 128 - camX
 			drawY := isoY - 0 - camY
 
 			op := &ebiten.DrawImageOptions{}
@@ -906,8 +906,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 					continue
 				}
 				
-				drawX := isoX - 32 - camX
-				drawY := isoY - 32 - camY
+				drawX := isoX - 128 - camX
+				drawY := isoY - 128 - camY
 
 				op := &ebiten.DrawImageOptions{}
 				op.GeoM.Translate(drawX, drawY)
@@ -945,8 +945,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		}
 
 		isoX, isoY := WorldToIso(iPos.X, iPos.Y)
-		drawX := isoX - 8 - camX
-		drawY := isoY - 8 - camY
+		drawX := isoX - 32 - camX
+		drawY := isoY - 32 - camY
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(drawX, drawY)
@@ -1006,8 +1006,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 
 		isoX, isoY := WorldToIso(pos.X, pos.Y)
 		
-		drawX := isoX - 8 - camX
-		drawY := isoY - 32 - camY
+		drawX := isoX - 32 - camX
+		drawY := isoY - 128 - camY
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(drawX, drawY)
@@ -1048,12 +1048,12 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 
 	if !playerDead {
 		// Draw facing indicator
-		targetX := playerX + playerFacingX*20.0
-		targetY := playerY + playerFacingY*20.0
+		targetX := playerX + playerFacingX*80.0
+		targetY := playerY + playerFacingY*80.0
 		
 		isoX, isoY := WorldToIso(targetX, targetY)
-		drawX := isoX - 4 - camX
-		drawY := isoY - 4 - camY
+		drawX := isoX - 16 - camX
+		drawY := isoY - 16 - camY
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(drawX, drawY)
@@ -1071,16 +1071,15 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			op.ColorScale.Scale(1.0, 1.0, 0.0, 0.7)     // Yellow if shove
 		}
 
+		op.GeoM.Reset()
+		op.GeoM.Scale(0.5, 0.5)
+		op.GeoM.Translate(drawX, drawY)
+
 		sprites = append(sprites, Renderable{
-			Image: assets.PlayerImage, // Use player image block for now, scaled down? Wait, we can scale it.
+			Image: assets.PlayerImage,
 			Depth: targetX + targetY,
 			Op:    op,
 		})
-		
-		// Let's actually scale the indicator to be small (4x4)
-		op.GeoM.Reset()
-		op.GeoM.Scale(0.25, 0.25)
-		op.GeoM.Translate(drawX, drawY)
 	}
 
 	sort.SliceStable(sprites, func(i, j int) bool {
@@ -1089,6 +1088,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 
 	for _, s := range sprites {
 		screen.DrawImage(s.Image, s.Op)
+	}
+
+	// 4. Bezier Curve Combat Swoosh Trails
+	if !playerDead && attackCooldown > 16 {
+		s.DrawAttackSwingArc(screen, playerX, playerY, playerFacingX, playerFacingY, playerWeaponType, attackCooldown, camX, camY)
 	}
 
 	// 5. Lighting / Day-Night Cycle
@@ -1180,4 +1184,171 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	if playerDead {
 		ebitenutil.DebugPrintAt(screen, "YOU DIED\n(Press 'R' to restart)", 350, 280)
 	}
+}
+
+// DrawAttackSwingArc renders dynamic Bezier curves for melee weapons, shove shockwaves, and shotgun blasts.
+func (s *DrawSystem) DrawAttackSwingArc(screen *ebiten.Image, playerX, playerY float64, facingX, facingY float64, weaponType string, attackCooldown int, camX, camY float64) {
+	if attackCooldown <= 16 || attackCooldown > 30 {
+		return
+	}
+
+	// Normalized swing progress t in [0.0, 1.0] across 14 active swing frames (30 -> 16)
+	t := float64(30-attackCooldown) / 14.0
+	alpha := float32((1.0 - t) * (1.0 - t))
+	if alpha <= 0.01 {
+		return
+	}
+
+	facingLen := math.Hypot(facingX, facingY)
+	if facingLen < 0.001 {
+		facingX, facingY = 1.0, 0.0
+	} else {
+		facingX /= facingLen
+		facingY /= facingLen
+	}
+	baseAngle := math.Atan2(facingY, facingX)
+
+	if weaponType == "shotgun" {
+		// Shotgun: Radial blast cone lines + expanding wavefront Bezier arc
+		const halfSpread = 0.39269908169872414 // 22.5 deg in radians
+
+		// 1. Expanding wavefront Bezier arc
+		waveRadius := float64(80.0 + t*240.0)
+		wAngle0 := baseAngle - halfSpread
+		wAngle1 := baseAngle + halfSpread
+
+		wp0X := playerX + waveRadius*0.85*math.Cos(wAngle0)
+		wp0Y := playerY + waveRadius*0.85*math.Sin(wAngle0)
+		wp1X := playerX + waveRadius*1.15*math.Cos(baseAngle)
+		wp1Y := playerY + waveRadius*1.15*math.Sin(baseAngle)
+		wp2X := playerX + waveRadius*0.85*math.Cos(wAngle1)
+		wp2Y := playerY + waveRadius*0.85*math.Sin(wAngle1)
+
+		s0x, s0y := WorldToIso(wp0X, wp0Y)
+		s1x, s1y := WorldToIso(wp1X, wp1Y)
+		s2x, s2y := WorldToIso(wp2X, wp2Y)
+
+		var arcPath vector.Path
+		arcPath.MoveTo(float32(s0x-camX), float32(s0y-camY))
+		arcPath.QuadTo(float32(s1x-camX), float32(s1y-camY), float32(s2x-camX), float32(s2y-camY))
+
+		// Outer glow
+		outerColor := color.RGBA{R: 255, G: 140, B: 0, A: uint8(255 * alpha * 0.7)}
+		outerDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
+		outerDrawOpts.ColorScale.ScaleWithColor(outerColor)
+		vector.StrokePath(screen, &arcPath, &vector.StrokeOptions{
+			Width:    10.0,
+			LineCap:  vector.LineCapRound,
+			LineJoin: vector.LineJoinRound,
+		}, outerDrawOpts)
+
+		// Inner core
+		coreColor := color.RGBA{R: 255, G: 255, B: 200, A: uint8(255 * alpha * 0.95)}
+		coreDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
+		coreDrawOpts.ColorScale.ScaleWithColor(coreColor)
+		vector.StrokePath(screen, &arcPath, &vector.StrokeOptions{
+			Width:    3.0,
+			LineCap:  vector.LineCapRound,
+			LineJoin: vector.LineJoinRound,
+		}, coreDrawOpts)
+
+		// 2. Muzzle blast radial traces
+		pIsoX, pIsoY := WorldToIso(playerX, playerY)
+		pxScreen := float32(pIsoX - camX)
+		pyScreen := float32(pIsoY - camY)
+
+		numRays := 7
+		for i := 0; i < numRays; i++ {
+			rayFraction := float64(i)/float64(numRays-1) - 0.5 // -0.5 to +0.5
+			rayAngle := baseAngle + rayFraction*2.0*halfSpread
+			rayDist := float64(120.0 + (1.0-math.Abs(rayFraction)*0.4)*200.0)
+
+			rxWorld := playerX + rayDist*math.Cos(rayAngle)
+			ryWorld := playerY + rayDist*math.Sin(rayAngle)
+			rxIso, ryIso := WorldToIso(rxWorld, ryWorld)
+
+			rayColor := color.RGBA{R: 255, G: 200, B: 50, A: uint8(255 * alpha * 0.6)}
+			vector.StrokeLine(screen, pxScreen, pyScreen, float32(rxIso-camX), float32(ryIso-camY), 2.5, rayColor, true)
+		}
+		return
+	}
+
+	// Melee weapons & shove: Sweeping quadratic Bezier arc
+	var deltaTheta float64
+	var rIn, rApex, rOut float64
+	var outerWidth, coreWidth float32
+	var outerColor, coreColor color.Color
+
+	switch weaponType {
+	case "axe":
+		// Fire Axe: Wide cleave fiery red-orange
+		deltaTheta = 2.0 // ~115 degrees
+		rIn = 40.0
+		rApex = 140.0
+		rOut = 120.0
+		outerWidth = 14.0
+		coreWidth = 4.0
+		outerColor = color.RGBA{R: 255, G: 69, B: 0, A: uint8(255 * alpha * 0.65)}
+		coreColor = color.RGBA{R: 255, G: 230, B: 120, A: uint8(255 * alpha * 0.95)}
+	case "weapon":
+		// Spiked Club / Bat: Cool royal blue / cyan motion trail
+		deltaTheta = 1.6 // ~90 degrees
+		rIn = 30.0
+		rApex = 105.0
+		rOut = 90.0
+		outerWidth = 10.0
+		coreWidth = 3.0
+		outerColor = color.RGBA{R: 65, G: 105, B: 225, A: uint8(255 * alpha * 0.55)}
+		coreColor = color.RGBA{R: 200, G: 240, B: 255, A: uint8(255 * alpha * 0.9)}
+	default:
+		// Unarmed shove / fists: Amber / bright shockwave
+		deltaTheta = 1.2 // ~70 degrees
+		rIn = 20.0
+		rApex = 100.0
+		rOut = 80.0
+		outerWidth = 8.0
+		coreWidth = 2.5
+		outerColor = color.RGBA{R: 255, G: 191, B: 0, A: uint8(255 * alpha * 0.45)}
+		coreColor = color.RGBA{R: 255, G: 255, B: 240, A: uint8(255 * alpha * 0.85)}
+	}
+
+	// Compute World Control Points P0, P1, P2
+	theta0 := baseAngle - deltaTheta/2.0
+	theta1 := baseAngle + deltaTheta/2.0
+
+	p0x := playerX + rIn*math.Cos(theta0)
+	p0y := playerY + rIn*math.Sin(theta0)
+
+	p1x := playerX + rApex*math.Cos(baseAngle)
+	p1y := playerY + rApex*math.Sin(baseAngle)
+
+	p2x := playerX + rOut*math.Cos(theta1)
+	p2y := playerY + rOut*math.Sin(theta1)
+
+	// Transform to screen space
+	s0x, s0y := WorldToIso(p0x, p0y)
+	s1x, s1y := WorldToIso(p1x, p1y)
+	s2x, s2y := WorldToIso(p2x, p2y)
+
+	var path vector.Path
+	path.MoveTo(float32(s0x-camX), float32(s0y-camY))
+	path.QuadTo(float32(s1x-camX), float32(s1y-camY), float32(s2x-camX), float32(s2y-camY))
+
+	// Pass 1: Outer Glow
+	outerDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
+	outerDrawOpts.ColorScale.ScaleWithColor(outerColor)
+	vector.StrokePath(screen, &path, &vector.StrokeOptions{
+		Width:    outerWidth,
+		LineCap:  vector.LineCapRound,
+		LineJoin: vector.LineJoinRound,
+	}, outerDrawOpts)
+
+	// Pass 2: Bright Core
+	coreDrawOpts := &vector.DrawPathOptions{AntiAlias: true}
+	coreDrawOpts.ColorScale.ScaleWithColor(coreColor)
+	vector.StrokePath(screen, &path, &vector.StrokeOptions{
+		Width:    coreWidth,
+		LineCap:  vector.LineCapRound,
+		LineJoin: vector.LineJoinRound,
+	}, coreDrawOpts)
 }

@@ -1,50 +1,35 @@
-# BRIEFING — 2026-08-28T17:14:00Z
+# BRIEFING — 2026-08-28T18:49:40Z
 
 ## Mission
-Investigate procedural sprite generation in cmd/tools/genassets and asset handling in internal/assets/images and internal/assets to understand sprite inventory, generation mechanisms, loading/rendering pipeline, improvement opportunities, and constraints.
+Investigate the asset generation pipeline and sprite rendering systems, focusing on 4x scaling from 64x32 to 256x128 and procedural vector styling.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: explorer, analyst
+- Roles: investigator, synthesis
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: asset procedural generation survey
+- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Milestone: Asset pipeline and rendering survey
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Purely procedural generation / no external downloads
-- Only write in agent's own directory (.agents/teamwork_preview_explorer_survey_1)
+- Produce survey report and handoff report
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: 2026-08-28T17:14:00Z
+- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Updated: 2026-08-28T18:49:40Z
 
 ## Investigation State
-- **Explored paths**:
-  - `cmd/tools/genassets/main.go`
-  - `internal/assets/assets.go`
-  - `internal/assets/audio.go`
-  - `internal/ecs/components.go`
-  - `internal/game/game.go`
-  - `internal/game/game_test.go`
-  - `internal/game/world/map.go`
-  - `internal/game/world/map_test.go`
-  - `cmd/game/main.go`
-  - `ORIGINAL_REQUEST.md`
+- **Explored paths**: `ORIGINAL_REQUEST.md`, `ART_STYLE_GUIDE.md`, `PROJECT.md`, `cmd/tools/genassets/main.go`, `cmd/tools/genassets/genassets_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/assets_stress_test.go`, `internal/game/world/map.go`, `internal/game/world/map_test.go`, `internal/game/game.go`, `internal/game/game_test.go`, `internal/game/combat_test.go`
 - **Key findings**:
-  - Currently 11 sprites generated: player.png (16x32), zombie.png (16x32), runner.png (16x32), weapon.png (16x16), food.png (16x16), water.png (16x16), grass.png (64x32), dirt.png (64x32), wood.png (64x32), wall.png (64x64), tree.png (64x64).
-  - All existing sprites are generated using basic shapes / solid fills / simple noise.
-  - Assets are embedded via `//go:embed images/*` in `internal/assets/assets.go` and decoded at startup into `*ebiten.Image`.
-  - Game engine renders floor tiles at (isoX - 32, isoY), walls/trees at (isoX - 32, isoY - 32), items at (isoX - 8, isoY - 8), and entities at (isoX - 8, isoY - 32) with Y-depth sorting.
-  - Upgrading sprites requires purely procedural pixel-art algorithms in Go standard library (color palettes, anatomical layers, shading, noise, dithering, geometric primitives).
-  - Adding armor and new weapons requires expanding genassets to produce new sprites (`armor.png`, `axe.png`, etc.), declaring them in `internal/assets/assets.go`, and integrating with ECS components and rendering.
-- **Unexplored areas**: None remaining for this survey.
+  - Full catalog of all 20 procedural asset generators, mathematical formulas, and geometric overlays.
+  - Complete isometric projection equations (`WorldToIso`, `IsoToWorld`), sprite draw offsets, and camera tracking.
+  - Comprehensive 4x scaling blueprint (`TileSize = 128`, 256x128 floors, 256x256 obstacles, 64x128 entities, 64x64 items).
+  - Bezier curve attack dynamics formulation for combat arcs.
+- **Unexplored areas**: None. All survey questions answered in depth.
 
 ## Key Decisions Made
-- Fully documented all 11 sprites, rendering pipeline, coordinate transformations, and algorithmic upgrade designs.
+- Completed detailed survey report in `survey_report.md` and 5-component hard handoff in `handoff.md`.
 
 ## Artifact Index
-- DISPATCH.md — record of initial dispatch
-- BRIEFING.md — working memory
-- progress.md — liveness heartbeat
-- handoff.md — final analysis handoff report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/survey_report.md` — Comprehensive survey report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/handoff.md` — 5-component handoff report

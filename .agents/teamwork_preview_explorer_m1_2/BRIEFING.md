@@ -1,34 +1,44 @@
-# BRIEFING — 2026-08-28T17:16:40Z
+# BRIEFING — 2026-08-28T18:52:15Z
 
 ## Mission
-Investigate and design procedural pixel-art asset generation algorithms for 64x32 isometric floor tiles and 64x64 vertical blocks in pure Go for Milestone 1 (`cmd/tools/genassets`).
+Investigate exact changes needed in `cmd/tools/genassets/main.go` for Vertical Obstacles / Props (256x256) and Character Entities (64x128) for Milestone 1.
 
 ## 🔒 My Identity
-- Archetype: Explorer
-- Roles: Investigation, Synthesis, Pixel-art Algorithm Architecture
+- Archetype: explorer
+- Roles: investigator, reporter
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_m1_2
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: Milestone 1 - Environment Tile Procedural Sprites in `cmd/tools/genassets`
+- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Milestone: Milestone 1 (High-Fidelity Asset Generation 4x Scaling)
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement production source code directly
-- Must provide exact procedural generation algorithms and pixel-art code structures in pure Go (`image`, `image/color`, `image/png`)
-- Must adhere to isometric 2:1 projection geometry (64x32 floor diamond, 64x64 vertical block footprint)
+- Read-only investigation — do NOT implement in project source code
+- Produce structured reports in `.agents/teamwork_preview_explorer_m1_2/`
+- Communicate via `send_message` and handoff report
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: 2026-08-28T17:16:40Z
+- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Updated: 2026-08-28T18:52:15Z
 
 ## Investigation State
-- **Explored paths**: `cmd/tools/genassets/main.go`, `internal/assets/assets.go`, `internal/game/world/map.go`, `internal/game/game.go`, `PROJECT.md`, `ORIGINAL_REQUEST.md`
-- **Key findings**: Complete 2:1 isometric coordinate mapping $(u, v)$, diamond formulas, color palettes, and Go code structures designed for 6 floor tiles (`grass.png`, `dirt.png`, `wood.png`, `asphalt.png`, `concrete.png`, `tile_floor.png`) and 4 vertical obstacles (`wall.png`, `tree.png`, `fence.png`, `debris.png`).
-- **Unexplored areas**: None within M1_2 scope.
+- **Explored paths**:
+  - `cmd/tools/genassets/main.go` (generators, helper primitives, obstacle & entity logic)
+  - `cmd/tools/genassets/genassets_test.go`
+  - `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/assets_stress_test.go`
+  - `internal/game/game.go` (`DrawSystem` isometric coordinate mapping and sprite anchor offsets)
+  - `PROJECT.md` and `ORIGINAL_REQUEST.md`
+- **Key findings**:
+  - Exact geometric formulas and coordinate mapping for all 10 obstacles on 256x256 canvas with ground footprint $y \in [128..256]$ and top face $y \in [0..128]$.
+  - Exact coordinates, grounding drop shadows, and visual styles for all 3 character entities on 64x128 canvas.
+  - Formulated alpha blending (`blendPixel`) and anti-aliased primitives (`drawAAEllipse`).
+- **Unexplored areas**: None for this subtask.
 
 ## Key Decisions Made
-- Designed pure Go generator functions with deterministic seeded RNG (`math/rand.NewSource`) and mathematical parametric mappings for seamless integration.
-- Documented full implementation code in `handoff.md`.
+- Fully documented all 10 obstacles and 3 entities in `m1_obstacles_entities_analysis.md`.
+- Completed 5-component `handoff.md`.
 
 ## Artifact Index
-- handoff.md — Complete procedural asset generation specification, isometric math, and Go code functions.
-- DISPATCH.md — Parent instructions and task dispatch.
-- progress.md — Task liveness and status tracking.
+- DISPATCH.md — Dispatch log
+- BRIEFING.md — Working memory index
+- progress.md — Heartbeat and progress log
+- m1_obstacles_entities_analysis.md — Detailed analysis report
+- handoff.md — 5-component handoff report

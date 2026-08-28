@@ -1,116 +1,86 @@
-# Milestone 1 Challenger Verification & Stress Test Report
+# Handoff Report: Milestone 1 Empirical Asset Challenge
 
-**Agent**: `teamwork_preview_challenger_m1_2`  
-**Working Directory**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2`  
-**Parent Conversation ID**: `efb9db38-c509-4c3c-ad0a-53ad2f86b201`  
-**Milestone**: Milestone 1 - Procedural Sprite Enhancements & Asset Pipeline Integration  
-**Verdict**: **APPROVE**  
+**Agent**: `m1_challenger_2`  
+**Verdict**: **FAIL**  
+**Role**: Empirical Challenger (critic, specialist)  
+**Date**: 2026-08-28T18:59:35Z  
 
 ---
 
 ## 1. Observation
 
-1. **Asset Regeneration & Determinism**:
-   - `cmd/tools/genassets/main.go` implements 20 asset generators utilizing deterministic seeds with `rand.New(rand.NewSource(seed))` (e.g. seed 42 for player, 101 for zombie, 202 for runner, 303 for grass, 404 for dirt, 505 for wood, 606 for asphalt, 707 for concrete, 909 for debris).
-   - Executed multi-pass SHA-256 regeneration verification harness (`cmd/tools/genassets/genassets_test.go:TestAssetRegenerationDeterminism`). Across 3 consecutive generator runs (`go run ./cmd/tools/genassets`), every single asset file produced identical SHA-256 hashes with 0 bit drift:
-     * `player.png` (16x32)
-     * `zombie.png` (16x32)
-     * `runner.png` (16x32)
-     * `grass.png` (64x32)
-     * `dirt.png` (64x32)
-     * `wood.png` (64x32)
-     * `asphalt.png` (64x32)
-     * `concrete.png` (64x32)
-     * `tile_floor.png` (64x32)
-     * `wall.png` (64x64)
-     * `tree.png` (64x64)
-     * `fence.png` (64x64)
-     * `debris.png` (64x64)
-     * `food.png` (16x16)
-     * `water.png` (16x16)
-     * `weapon.png` (16x16)
-     * `axe.png` (16x16)
-     * `shotgun.png` (16x16)
-     * `ammo.png` (16x16)
-     * `armor.png` (16x16)
+1. **Test Execution**:
+   - Running `CC=gcc go test -v ./internal/assets -run TestEmpiricalFloorDiamondGeometry/images/dirt.png` produces verbatim failure:
+     ```
+     --- FAIL: TestEmpiricalFloorDiamondGeometry (0.00s)
+         --- FAIL: TestEmpiricalFloorDiamondGeometry/images/dirt.png (0.00s)
+             empirical_challenger_test.go:226: Inner hole at (153, 30): RGBA=(0, 0, 0, 45) [isoDist=0.723]
+             empirical_challenger_test.go:235: images/dirt.png has 18 non-transparent pixels outside isometric diamond (isoDist > 1.0)
+             empirical_challenger_test.go:242: images/dirt.png has 151 transparent/semi-transparent pixels inside solid core (isoDist <= 0.85)
+     ```
+   - Running `CC=gcc go test -v -race ./internal/assets -run TestChallenger_MultiThreadedLoadAndPointerRace` produces verbatim race detector failure:
+     ```
+     ==================
+     WARNING: DATA RACE
+     Write at 0x000000eb92a8 by goroutine 40:
+       github.com/BryceWayne/go-zomboid/internal/assets.Load()
+           /home/bryce/code/go-zomboid/internal/assets/assets.go:86 +0x84a
+     Previous write at 0x000000eb92a8 by goroutine 42:
+       github.com/BryceWayne/go-zomboid/internal/assets.Load()
+           /home/bryce/code/go-zomboid/internal/assets/assets.go:86 +0x84a
+     ==================
+     ```
 
-2. **Asset Loader Resolution (`internal/assets.Load()`)**:
-   - Executed pointer verification tests (`internal/assets/assets_test.go:TestAssetsLoadAllPointersNonNil` and `internal/assets/assets_stress_test.go:TestAssetsLoadIdempotency`).
-   - All 20 exported global pointers (`PlayerImage`, `ZombieImage`, `RunnerImage`, `GrassImage`, `DirtImage`, `WoodImage`, `AsphaltImage`, `ConcreteImage`, `TileFloorImage`, `WallImage`, `TreeImage`, `FenceImage`, `DebrisImage`, `WeaponImage`, `AxeImage`, `ShotgunImage`, `AmmoImage`, `ArmorImage`, `FoodImage`, `WaterImage`) resolved to valid, non-nil `*ebiten.Image` objects matching their exact expected pixel dimensions.
-   - Repeated calls to `Load()` executed idempotently without memory corruption, panic, or pointer dropping.
+2. **Code Inspection**:
+   - In `cmd/tools/genassets/main.go:250-265`, `drawVectorPebble()` draws pebble drop shadows using `setPixel(img, x, y, dropShadow)` with `dropShadow := color.RGBA{0, 0, 0, 45}` without checking isometric diamond bounds `isoDist <= 1.0`.
+   - In `internal/assets/assets.go:53-88`, `Load()` performs direct unsynchronized writes to global variables `PlayerImage`, `GrassImage`, `WallImage`, etc., without `sync.Once`.
 
-3. **Geometrical & Rendering Integrity**:
-   - Floor diamonds (64x32) were stress-tested for 2:1 isometric rhombus containment (`TestFloorTileIsometricBounds`). All non-transparent pixels strictly adhered to $|x - 31.5|/32.5 + |y - 15.5|/16.5 \le 1.0$, preventing seam bleeding.
-   - Character entities (16x32) were verified for ground anchoring (`TestCharacterGroundAnchor`), ensuring feet pixels exist in rows 28-31 to prevent floating.
-   - Item sprites (16x16) were tested for minimum pixel density and dark perimeter contrast (`TestItemOutlineContrast`).
+3. **Exported Pointer & Bounds Inspection**:
+   - Checked all 27 exported pointers via `internal/assets/challenger_stress_test.go`:
+     - Character entities (3): `PlayerImage`, `ZombieImage`, `RunnerImage` -> 64x128.
+     - Floor tiles (6): `GrassImage`, `DirtImage`, `WoodImage`, `AsphaltImage`, `ConcreteImage`, `TileFloorImage` -> 256x128.
+     - Vertical obstacles/props (10): `WallImage`, `TreeImage`, `FenceImage`, `DebrisImage`, `TentImage`, `StumpImage`, `MushroomImage`, `SignImage`, `ElevationBlockImage`, `ElevationRampImage` -> 256x256.
+     - Item/equipment (8): `FoodImage`, `WaterImage`, `WeaponImage`, `AxeImage`, `ShotgunImage`, `AmmoImage`, `ArmorImage`, `AntidoteImage` -> 64x64.
+   - All 27 pointers are non-nil, correctly decoded, and match specified bounds.
 
-4. **Embedding Integrity, Build, and Test Suite**:
-   - Running `CC=gcc go test -v ./... -count=1` executed all unit and stress test suites across all packages:
-     * `cmd/tools/genassets`: PASS (0.33s)
-     * `internal/assets`: PASS (0.03s)
-     * `internal/game`: PASS (0.02s)
-     * `internal/game/world`: PASS (0.00s)
-   - Running `CC=gcc go build -o bin/game ./cmd/game` succeeded with exit code 0, generating a 14MB ELF 64-bit binary.
-   - Running `CC=gcc go vet ./...` completed with 0 warnings/errors.
+4. **Visual & Statistical Analysis**:
+   - Luminance dynamic range $\ge 90.0$ and RMS contrast $\ge 25.0$ on all 27 assets.
+   - All character entities have drop shadows anchored in rows 112..127 and full posture in rows 0..40.
+   - All 8 item icons have centered bounding centroids within $[20..44]$.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Determinism Logic**:
-   - Observation: Pseudo-random generators in `genassets` are explicitly seeded per entity/tile generator.
-   - Test: `TestAssetRegenerationDeterminism` captured initial SHA256 checksums, ran `go run ./cmd/tools/genassets` for 3 iterations, and compared hashes after every pass.
-   - Deduction: Asset regeneration is 100% deterministic and reproducible across builds.
-
-2. **Loader & Embedding Logic**:
-   - Observation: `//go:embed images/*` embeds all 20 PNG files into `imageFS`.
-   - Test: `TestAssetsLoadAllPointersNonNil` calls `Load()` and verifies that each of the 20 global pointer variables is non-nil and has matching `Bounds().Dx()` and `Bounds().Dy()`.
-   - Deduction: The embedding subsystem and asset loader correctly decode all images into valid Ebitengine textures without runtime failure or nil dereference.
-
-3. **Compilation & Integration Logic**:
-   - Observation: Game entrypoint `cmd/game/main.go` invokes `assets.Load()` and initializes the game loop.
-   - Test: `CC=gcc go build -o bin/game ./cmd/game` and `TestNewGameInitialization` verified binary compilation and runtime game structure allocation without crashes.
-   - Deduction: Asset integration is complete, stable, and ready for Milestone 2 world generation.
+1. From Observation 1 and Observation 2, `drawVectorPebble()` directly replaces opaque earthen pixels with `RGBA{0, 0, 0, 45}`.
+2. Because `setPixel` is used rather than `blendPixel`, the alpha channel is overwritten to 45 rather than preserving opacity 255.
+3. Therefore, 151 core pixels in `images/dirt.png` become transparent holes, causing background bleeding during game rendering.
+4. Additionally, because pebble shadow center `(cx+2, cy+2)` is drawn without checking $d_{iso} \le 1.0$, 18 shadow pixels extend outside the 2:1 isometric diamond, causing seams.
+5. From Observation 1 and Observation 2, `internal/assets.Load()` lacks synchronization primitives (`sync.Once`).
+6. When `Load()` is invoked concurrently from multiple goroutines or read during loading, unsynchronized writes occur on the 27 package variables, creating a data race detected by `-race`.
+7. Therefore, Milestone 1 cannot be approved in its current state.
 
 ---
 
 ## 3. Caveats
 
-- Milestone 1 encompasses static textures and procedural generators. Multi-frame animations (e.g. walk cycles, swing frames) are slated for subsequent combat milestones.
-- Headless testing of `assets.Load()` creates `*ebiten.Image` textures; no active window/display server is required during test execution.
+- Single-threaded sequential execution of `assets.Load()` behaves correctly and decodes all 27 assets into non-nil `*ebiten.Image` handles.
+- Asset pixel artwork quality, vector styling, dynamic range, and determinism across the other 26 assets (`grass.png`, `wood.png`, `player.png`, etc.) meet and exceed requirements.
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: APPROVE**
-
-The Milestone 1 asset pipeline satisfies all functional, architectural, and adversarial requirements:
-- Deterministic procedural generation across all 20 specified asset types.
-- 100% non-nil pointer resolution in `internal/assets.Load()`.
-- Flawless embedding, isometric diamond alignment, and dark contour contrast.
-- Zero test failures and clean binary compilation with `CC=gcc go build -o bin/game ./cmd/game`.
+**Verdict: FAIL**  
+Milestone 1 asset pipeline has 2 reproducible defects that must be fixed:
+1. `cmd/tools/genassets/main.go:250-265`: Fix `drawVectorPebble()` to use `blendPixel()` and constrain shadow drawing to `isoDist <= 1.0`.
+2. `internal/assets/assets.go:53-88`: Wrap `Load()` with `sync.Once` to make asset loading thread-safe and race-free.
 
 ---
 
 ## 5. Verification Method
 
-To independently verify these findings, run:
-
-1. **Full Workspace Test Suite**:
-   ```bash
-   CC=gcc go test -v ./... -count=1
-   ```
-   *Expected*: PASS across all packages (`cmd/tools/genassets`, `internal/assets`, `internal/game`, `internal/game/world`).
-
-2. **Asset Regeneration & Determinism Check**:
-   ```bash
-   CC=gcc go test -v ./cmd/tools/genassets -run TestAssetRegenerationDeterminism -count=1
-   ```
-   *Expected*: PASS with exit code 0.
-
-3. **Game Binary Compilation**:
-   ```bash
-   CC=gcc go build -o bin/game ./cmd/game
-   ```
-   *Expected*: Generates `bin/game` executable with exit code 0.
+To independently verify these findings:
+1. Run `CC=gcc go test -v ./internal/assets -run TestEmpiricalFloorDiamondGeometry/images/dirt.png` to reproduce the dirt tile alpha hole and boundary bleed failure.
+2. Run `CC=gcc go test -v -race ./internal/assets -run TestChallenger_MultiThreadedLoadAndPointerRace` to reproduce the concurrent data race on `assets.Load()`.
+3. Inspect `cmd/tools/genassets/main.go` lines 251–265 and `internal/assets/assets.go` lines 53–88.

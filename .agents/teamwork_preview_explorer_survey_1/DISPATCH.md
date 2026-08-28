@@ -1,11 +1,17 @@
-## 2026-08-28T17:12:49Z
-Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md.
-Investigate the codebase with a focus on procedural sprite generation in `cmd/tools/genassets` and asset handling in `internal/assets/images` and `internal/assets`.
-Analyze:
-1. What sprites currently exist and how `cmd/tools/genassets` generates them (players, zombies, items, tiles, weapons, armor, etc.).
-2. How sprites are loaded and used in the game engine (Ebitengine).
-3. Opportunities and requirements for enhancing the procedural generation of sprites (higher detail, shading, variety, directional frames, item icons, armor sprites, new weapon sprites).
-4. Any constraints (e.g. no external downloads, purely procedural generation).
+## 2026-08-28T18:47:56Z
 
-Document your comprehensive findings in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/handoff.md` following standard handoff structure (Observation, Logic Chain, Caveats, Conclusion, Verification Method).
-When done, message your parent with a concise summary and path to your handoff report.
+You are survey_explorer_1.
+Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project root: /home/bryce/code/go-zomboid
+
+Mission:
+Investigate the asset generation pipeline and sprite rendering systems in the codebase.
+Specifically:
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md.
+2. Examine `cmd/tools/genassets/main.go` (and any related files): How are base tiles (floors 64x32), walls, entities (player, zombies), props, weapons, and armor generated?
+3. What procedural geometric overlays exist (chevrons, pebbles, overlapping circles, wood grains, brick patterns)? How are coordinates/radii hardcoded or calculated?
+4. How are sprites loaded and embedded in `internal/assets` and used in `internal/game`?
+5. How can we cleanly scale floor tiles from 64x32 to 256x128 (4x scale) and proportionally scale all walls, entities, props, weapons, and overlays to maintain high-fidelity vector styling?
+6. Write a comprehensive survey report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/survey_report.md` and `handoff.md`.
+7. Send a message to your parent when complete.

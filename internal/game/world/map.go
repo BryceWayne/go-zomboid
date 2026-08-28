@@ -27,7 +27,7 @@ const (
 	TileSign
 )
 
-const TileSize = 32
+const TileSize = 128
 
 // IsSolid returns true if the tile blocks physical entity movement and collision.
 func (t TileType) IsSolid() bool {
@@ -338,8 +338,8 @@ func NewMap(width, height int) *Map {
 		playerTileY = midY
 	}
 	m.PlayerSpawn = FloatPoint{
-		X: float64(playerTileX)*TileSize + 16.0,
-		Y: float64(playerTileY)*TileSize + 16.0,
+		X: float64(playerTileX)*TileSize + 64.0,
+		Y: float64(playerTileY)*TileSize + 64.0,
 	}
 
 	// Generate Thematic Loot Spawns
@@ -361,13 +361,13 @@ func (m *Map) generateSmallFallback(width, height int) {
 		m.SetTile(midX, y, TileDirt)
 	}
 	m.PlayerSpawn = FloatPoint{
-		X: float64(midX)*TileSize + 16.0,
-		Y: float64(midY)*TileSize + 16.0,
+		X: float64(midX)*TileSize + 64.0,
+		Y: float64(midY)*TileSize + 64.0,
 	}
 	m.LootSpawns = append(m.LootSpawns,
-		LootSpawn{Type: "weapon", X: m.PlayerSpawn.X + 32, Y: m.PlayerSpawn.Y},
-		LootSpawn{Type: "food", X: m.PlayerSpawn.X, Y: m.PlayerSpawn.Y + 32},
-		LootSpawn{Type: "water", X: m.PlayerSpawn.X - 32, Y: m.PlayerSpawn.Y},
+		LootSpawn{Type: "weapon", X: m.PlayerSpawn.X + 128, Y: m.PlayerSpawn.Y},
+		LootSpawn{Type: "food", X: m.PlayerSpawn.X, Y: m.PlayerSpawn.Y + 128},
+		LootSpawn{Type: "water", X: m.PlayerSpawn.X - 128, Y: m.PlayerSpawn.Y},
 	)
 }
 
@@ -804,58 +804,58 @@ func (m *Map) placeEnvironmentalProps(width, height, midX, midY int) {
 
 func (m *Map) generateThematicLoot(playerTileX, playerTileY int) {
 	// Guaranteed starter loot safely inside player starting house
-	m.addLootIfWalkable("weapon", float64(playerTileX)*TileSize+16, float64(playerTileY-1)*TileSize+16)
-	m.addLootIfWalkable("food", float64(playerTileX-1)*TileSize+16, float64(playerTileY)*TileSize+16)
-	m.addLootIfWalkable("water", float64(playerTileX)*TileSize+16, float64(playerTileY+1)*TileSize+16)
+	m.addLootIfWalkable("weapon", float64(playerTileX)*TileSize+64, float64(playerTileY-1)*TileSize+64)
+	m.addLootIfWalkable("food", float64(playerTileX-1)*TileSize+64, float64(playerTileY)*TileSize+64)
+	m.addLootIfWalkable("water", float64(playerTileX)*TileSize+64, float64(playerTileY+1)*TileSize+64)
 
 	// Contextual room loot distribution
 	for _, b := range m.Buildings {
 		for _, r := range b.Rooms {
-			centerX := float64(r.X+r.W/2)*TileSize + 16.0
-			centerY := float64(r.Y+r.H/2)*TileSize + 16.0
+			centerX := float64(r.X+r.W/2)*TileSize + 64.0
+			centerY := float64(r.Y+r.H/2)*TileSize + 64.0
 
 			switch r.Type {
 			case RoomKitchen:
-				m.addLootIfWalkable("food", centerX-16, centerY)
-				m.addLootIfWalkable("water", centerX+16, centerY)
+				m.addLootIfWalkable("food", centerX-64, centerY)
+				m.addLootIfWalkable("water", centerX+64, centerY)
 			case RoomLiving:
-				m.addLootIfWalkable("food", centerX-16, centerY-16)
-				m.addLootIfWalkable("water", centerX+16, centerY+16)
+				m.addLootIfWalkable("food", centerX-64, centerY-64)
+				m.addLootIfWalkable("water", centerX+64, centerY+64)
 				m.addLootIfWalkable("weapon", centerX, centerY)
 			case RoomBedroom:
-				m.addLootIfWalkable("armor", centerX-16, centerY)
-				m.addLootIfWalkable("axe", centerX+16, centerY)
+				m.addLootIfWalkable("armor", centerX-64, centerY)
+				m.addLootIfWalkable("axe", centerX+64, centerY)
 				m.addLootIfWalkable("weapon", centerX, centerY)
 			case RoomBathroom:
 				m.addLootIfWalkable("water", centerX, centerY)
 			case RoomStore:
-				m.addLootIfWalkable("food", centerX-32, centerY)
-				m.addLootIfWalkable("food", centerX+32, centerY)
-				m.addLootIfWalkable("water", centerX, centerY-32)
-				m.addLootIfWalkable("water", centerX, centerY+32)
+				m.addLootIfWalkable("food", centerX-128, centerY)
+				m.addLootIfWalkable("food", centerX+128, centerY)
+				m.addLootIfWalkable("water", centerX, centerY-128)
+				m.addLootIfWalkable("water", centerX, centerY+128)
 			case RoomPharmacy, RoomMedicalStorage, RoomConsultation:
-				m.addLootIfWalkable("food", centerX-24, centerY)
-				m.addLootIfWalkable("water", centerX+24, centerY)
+				m.addLootIfWalkable("food", centerX-96, centerY)
+				m.addLootIfWalkable("water", centerX+96, centerY)
 				m.addLootIfWalkable("armor", centerX, centerY)
-				m.addLootIfWalkable("antidote", centerX-16, centerY-16)
+				m.addLootIfWalkable("antidote", centerX-64, centerY-64)
 			case RoomArmory:
-				m.addLootIfWalkable("weapon", centerX-24, centerY-24)
-				m.addLootIfWalkable("axe", centerX+24, centerY-24)
-				m.addLootIfWalkable("shotgun", centerX-24, centerY+24)
-				m.addLootIfWalkable("ammo", centerX+24, centerY+24)
+				m.addLootIfWalkable("weapon", centerX-96, centerY-96)
+				m.addLootIfWalkable("axe", centerX+96, centerY-96)
+				m.addLootIfWalkable("shotgun", centerX-96, centerY+96)
+				m.addLootIfWalkable("ammo", centerX+96, centerY+96)
 				m.addLootIfWalkable("armor", centerX, centerY)
-				m.addLootIfWalkable("antidote", centerX-16, centerY-16)
+				m.addLootIfWalkable("antidote", centerX-64, centerY-64)
 			case RoomHoldingCell:
 				m.addLootIfWalkable("weapon", centerX, centerY)
 			case RoomOffice:
-				m.addLootIfWalkable("food", centerX-20, centerY)
-				m.addLootIfWalkable("weapon", centerX+20, centerY)
-				m.addLootIfWalkable("ammo", centerX, centerY+20)
+				m.addLootIfWalkable("food", centerX-80, centerY)
+				m.addLootIfWalkable("weapon", centerX+80, centerY)
+				m.addLootIfWalkable("ammo", centerX, centerY+80)
 			case RoomWarehouseBay, RoomStorage, RoomLoadingDock:
-				m.addLootIfWalkable("axe", centerX-32, centerY)
-				m.addLootIfWalkable("ammo", centerX+32, centerY)
-				m.addLootIfWalkable("armor", centerX, centerY-32)
-				m.addLootIfWalkable("weapon", centerX, centerY+32)
+				m.addLootIfWalkable("axe", centerX-128, centerY)
+				m.addLootIfWalkable("ammo", centerX+128, centerY)
+				m.addLootIfWalkable("armor", centerX, centerY-128)
+				m.addLootIfWalkable("weapon", centerX, centerY+128)
 			}
 		}
 	}
@@ -889,13 +889,13 @@ func (m *Map) generateZombieSpawns(targetCount int) {
 			continue
 		}
 
-		zx := float64(tx)*TileSize + 16.0
-		zy := float64(ty)*TileSize + 16.0
+		zx := float64(tx)*TileSize + 64.0
+		zy := float64(ty)*TileSize + 64.0
 
 		dx := zx - m.PlayerSpawn.X
 		dy := zy - m.PlayerSpawn.Y
 		dist := math.Sqrt(dx*dx + dy*dy)
-		if dist < 350.0 {
+		if dist < 1400.0 {
 			continue // Safe player perimeter
 		}
 

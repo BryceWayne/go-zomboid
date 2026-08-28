@@ -40,16 +40,16 @@ func TestEmpirical_ECSMovementAABBCollision(t *testing.T) {
 		velY       float64
 		shouldMove bool
 	}{
-		// Moving right towards Wall at x=15 (pixel 480). Start at x=463 (box x+w=479, clear), velX=3 (box x+w=482, collides with wall 480)
-		{"BlockedByWall", 463, 10.0 * world.TileSize, 3.0, 0, false},
-		// Moving right towards Tree at x=15 (pixel 480). Start at x=463, velX=3 (collides with tree)
-		{"BlockedByTree", 463, 12.0 * world.TileSize, 3.0, 0, false},
-		// Moving right towards Fence at x=15 (pixel 480). Start at x=463, velX=3 (collides with fence)
-		{"BlockedByFence", 463, 14.0 * world.TileSize, 3.0, 0, false},
-		// Moving right towards Debris at x=15 (pixel 480). Start at x=463, velX=3 (collides with debris)
-		{"BlockedByDebris", 463, 16.0 * world.TileSize, 3.0, 0, false},
-		// Moving right on grass at y=11 (pixel 352). Start at x=463, velX=3. Free grass passage.
-		{"AllowedOnGrass", 463, 11.0 * world.TileSize, 3.0, 0, true},
+		// Moving right towards Wall at x=15 (pixel 1920). Start at x=1850 (box x+w=1914, clear), velX=12 (box x+w=1926, collides with wall 1920)
+		{"BlockedByWall", 1850, 10.0 * world.TileSize, 12.0, 0, false},
+		// Moving right towards Tree at x=15 (pixel 1920). Start at x=1850, velX=12 (collides with tree)
+		{"BlockedByTree", 1850, 12.0 * world.TileSize, 12.0, 0, false},
+		// Moving right towards Fence at x=15 (pixel 1920). Start at x=1850, velX=12 (collides with fence)
+		{"BlockedByFence", 1850, 14.0 * world.TileSize, 12.0, 0, false},
+		// Moving right towards Debris at x=15 (pixel 1920). Start at x=1850, velX=12 (collides with debris)
+		{"BlockedByDebris", 1850, 16.0 * world.TileSize, 12.0, 0, false},
+		// Moving right on grass at y=11 (pixel 1408). Start at x=1850, velX=12. Free grass passage.
+		{"AllowedOnGrass", 1850, 11.0 * world.TileSize, 12.0, 0, true},
 	}
 
 	for _, tc := range testCases {
@@ -57,7 +57,7 @@ func TestEmpirical_ECSMovementAABBCollision(t *testing.T) {
 			ent := posMap.NewEntity(
 				&ecs.Position{X: tc.startX, Y: tc.startY},
 				&ecs.Velocity{X: tc.velX, Y: tc.velY},
-				&ecs.Collider{Width: 16, Height: 16},
+				&ecs.Collider{Width: 64, Height: 64},
 			)
 
 			sys.processMovement()
@@ -150,8 +150,8 @@ func TestEmpirical_ZombieAndPlayerSpawnInvariants(t *testing.T) {
 			dx := zPos.X - pPos.X
 			dy := zPos.Y - pPos.Y
 			dist := math.Sqrt(dx*dx + dy*dy)
-			if dist < 350.0 {
-				t.Fatalf("FAIL: Iter %d: Zombie spawned too close to player: dist=%.2f < 350", iter, dist)
+			if dist < 1400.0 {
+				t.Fatalf("FAIL: Iter %d: Zombie spawned too close to player: dist=%.2f < 1400", iter, dist)
 			}
 		}
 

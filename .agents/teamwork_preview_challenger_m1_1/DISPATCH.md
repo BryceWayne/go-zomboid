@@ -1,19 +1,21 @@
-## 2026-08-28T17:21:59Z
-You are a Challenger subagent (teamwork_preview_challenger_m1_1).
+## 2026-08-28T18:55:18Z
+You are m1_challenger_1.
 Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_1
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project Plan File: /home/bryce/code/go-zomboid/PROJECT.md
 Project root: /home/bryce/code/go-zomboid
-Original Request: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan: /home/bryce/code/go-zomboid/PROJECT.md
 
-Task:
-Empirically verify Milestone 1 implementation:
-1. Run `go run ./cmd/tools/genassets`.
-2. Inspect the generated images in `internal/assets/images/`:
-   - Characters (16x32): `player.png`, `zombie.png`, `runner.png`
-   - Floor diamonds (64x32): `grass.png`, `dirt.png`, `wood.png`, `asphalt.png`, `concrete.png`, `tile_floor.png`
-   - Vertical blocks (64x64): `wall.png`, `tree.png`, `fence.png`, `debris.png`
-   - Items/equipment (16x16): `food.png`, `water.png`, `weapon.png`, `axe.png`, `shotgun.png`, `ammo.png`, `armor.png`
-3. Check for pixel corruption, invalid dimensions, non-empty image content, transparency integrity, and deterministic regeneration.
-4. Execute tests `CC=gcc go test -v ./...`.
-5. Provide your explicit verdict: APPROVE or REQUEST_CHANGES.
-Document your findings in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_1/handoff.md` and message your parent.
+Mission:
+Empirically verify Milestone 1 (Asset Pipeline 4x Scaling).
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
+2. Execute empirical verification on generated assets:
+   - Check all 27 assets in `internal/assets/images/*.png`.
+   - Write stress test / empirical verifications verifying:
+     a) Pixel dimensions exact match (256x128 floors, 256x256 obstacles, 64x128 entities, 64x64 items).
+     b) Non-zero alpha pixel fill ratios across all images.
+     c) Floor diamond boundary geometry: outer corners are 100% transparent alpha=0, inner diamond is solid alpha=255.
+     d) Character entity bottom rows (y in 112..127) have solid grounding pixels.
+     e) Asset generation determinism across consecutive runs.
+3. Run `go test -v ./internal/assets/... ./cmd/tools/genassets/...`.
+4. Write your challenge report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_1/challenge_report.md` and `handoff.md` with verdict: APPROVE or FAIL.
+5. Send a message to your parent when complete.

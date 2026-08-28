@@ -1,7 +1,15 @@
-## 2026-08-28T17:12:49Z
-Investigate the codebase with a focus on Items, Weapons, Armor, Combat, and Damage mechanics, plus existing test suites.
-Analyze:
-1. Current items, inventory, weapon types, combat logic, player stats, zombie attacks, and damage calculation.
-2. What weapon types exist today, and how a new weapon type (e.g. ranged weapons like crossbow/shotgun/pistol, or new melee types like spear/axe/chainsaw) can be implemented.
-3. How an armor system (damage mitigation, armor slots/equipment, durability/defense calculation, UI indicator) should be architected and integrated.
-4. Current test suites (`go test ./...`), build commands, Ebitengine game loop startup (`cmd/game`), and testing harness.
+## 2026-08-28T18:47:56Z
+You are survey_explorer_3.
+Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_3
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project root: /home/bryce/code/go-zomboid
+
+Mission:
+Investigate combat dynamics, attack arcs, DrawSystem / rendering loop, and test infrastructure.
+Specifically:
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md.
+2. Examine player attack triggering, weapon types (axe, baseball bat, knife, etc.), attack animations / timers, facing direction calculation, and mouse input handling.
+3. Examine `DrawSystem` / rendering logic (e.g., in `internal/game/render.go` or `internal/game/`): How are weapons, entities, and effects currently drawn? How can dynamic weapon swing trails/arcs (swoosh effect) using Bezier Curves (quadratic/cubic bezier with vector points, alpha fading, stroke width, color gradient/fill) be implemented in Ebitengine?
+4. Inspect existing test suites across the project (`go test ./...`), test coverage, and test structure.
+5. Write a comprehensive survey report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_3/survey_report.md` and `handoff.md`.
+6. Send a message to your parent when complete.

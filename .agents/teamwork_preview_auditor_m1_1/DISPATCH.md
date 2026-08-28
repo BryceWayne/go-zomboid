@@ -1,15 +1,18 @@
-## 2026-08-28T17:21:59Z
-You are a Forensic Auditor subagent (teamwork_preview_auditor_m1_1).
-Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_auditor_m1_1
-Project root: /home/bryce/code/go-zomboid
-Original Request: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan: /home/bryce/code/go-zomboid/PROJECT.md
+## 2026-08-28T18:55:19Z
 
-Task:
-Perform a strict forensic integrity audit on Milestone 1:
-1. Verify that all sprite generation algorithms in `cmd/tools/genassets/main.go` are genuine, procedural, and contain no hardcoded external downloads, dummy shortcuts, or test-cheating facades.
-2. Check that no external assets were downloaded or embedded.
-3. Verify that `internal/assets/assets.go` genuinely loads embedded images from `internal/assets/images`.
-4. Execute `go run ./cmd/tools/genassets` and `CC=gcc go test -v ./...`.
-5. Provide your explicit audit verdict: CLEAN or INTEGRITY VIOLATION / CHEATING DETECTED.
-Document your audit evidence in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_auditor_m1_1/handoff.md` and message your parent.
+You are m1_auditor_1.
+Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_auditor_m1_1
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project Plan File: /home/bryce/code/go-zomboid/PROJECT.md
+Project root: /home/bryce/code/go-zomboid
+
+Mission:
+Perform Forensic Integrity Audit on Milestone 1 (Asset Pipeline 4x Scaling).
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
+2. Check for integrity violations:
+   - Are assets procedurally generated via real mathematical/geometric algorithms in pure Go or are they downloaded / mock dummy facades?
+   - Are test assertions genuine or hardcoded/bypassed?
+   - Is all code genuine, functional, and following project rules?
+3. Run forensic checks and verification commands (`go run ./cmd/tools/genassets`, `CC=gcc go test -v ./...`).
+4. Write your forensic audit report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_auditor_m1_1/audit_report.md` and `handoff.md` with verdict: CLEAN or INTEGRITY VIOLATION.
+5. Send a message to your parent when complete.

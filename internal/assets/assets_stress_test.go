@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestFloorTileIsometricBounds verifies that floor tiles (64x32)
+// TestFloorTileIsometricBounds verifies that floor tiles (256x128)
 // do not bleed heavily outside the 2:1 isometric diamond.
 func TestFloorTileIsometricBounds(t *testing.T) {
 	floorTiles := []string{
@@ -33,19 +33,19 @@ func TestFloorTileIsometricBounds(t *testing.T) {
 			}
 
 			bounds := img.Bounds()
-			if bounds.Dx() != 64 || bounds.Dy() != 32 {
-				t.Fatalf("%s bounds = %dx%d, want 64x32", path, bounds.Dx(), bounds.Dy())
+			if bounds.Dx() != 256 || bounds.Dy() != 128 {
+				t.Fatalf("%s bounds = %dx%d, want 256x128", path, bounds.Dx(), bounds.Dy())
 			}
 
-			// Center of diamond is (31.5, 15.5)
-			centerX := 31.5
-			centerY := 15.5
-			radiusX := 32.5
-			radiusY := 16.5
+			// Center of diamond is (127.5, 63.5)
+			centerX := 127.5
+			centerY := 63.5
+			radiusX := 128.5
+			radiusY := 64.5
 
 			invalidBleedPixels := 0
-			for y := 0; y < 32; y++ {
-				for x := 0; x < 64; x++ {
+			for y := 0; y < 128; y++ {
+				for x := 0; x < 256; x++ {
 					_, _, _, a := img.At(x, y).RGBA()
 					if a > 0 {
 						// Normalized Manhattan distance in diamond coordinates
@@ -65,8 +65,8 @@ func TestFloorTileIsometricBounds(t *testing.T) {
 	}
 }
 
-// TestCharacterGroundAnchor verifies that character entities (16x32)
-// have feet anchored at the lower boundary (y in [28..31]) to prevent floating.
+// TestCharacterGroundAnchor verifies that character entities (64x128)
+// have feet anchored at the lower boundary (y in [112..127]) to prevent floating.
 func TestCharacterGroundAnchor(t *testing.T) {
 	characters := []string{
 		"images/player.png",
@@ -86,10 +86,15 @@ func TestCharacterGroundAnchor(t *testing.T) {
 				t.Fatalf("failed to decode %s: %v", path, err)
 			}
 
-			// Check bottom 4 rows for grounding pixels
+			bounds := img.Bounds()
+			if bounds.Dx() != 64 || bounds.Dy() != 128 {
+				t.Fatalf("%s bounds = %dx%d, want 64x128", path, bounds.Dx(), bounds.Dy())
+			}
+
+			// Check bottom rows for grounding pixels
 			groundPixels := 0
-			for y := 28; y < 32; y++ {
-				for x := 0; x < 16; x++ {
+			for y := 112; y < 128; y++ {
+				for x := 0; x < 64; x++ {
 					_, _, _, a := img.At(x, y).RGBA()
 					if a > 0 {
 						groundPixels++
@@ -98,13 +103,13 @@ func TestCharacterGroundAnchor(t *testing.T) {
 			}
 
 			if groundPixels == 0 {
-				t.Errorf("character %s has no grounding pixels in rows 28-31 (appears floating)", path)
+				t.Errorf("character %s has no grounding pixels in rows 112-127 (appears floating)", path)
 			}
 		})
 	}
 }
 
-// TestItemOutlineContrast verifies that 16x16 item sprites have adequate
+// TestItemOutlineContrast verifies that 64x64 item sprites have adequate
 // pixel density and contrast against transparent backgrounds.
 func TestItemOutlineContrast(t *testing.T) {
 	items := []string{
@@ -115,6 +120,7 @@ func TestItemOutlineContrast(t *testing.T) {
 		"images/shotgun.png",
 		"images/ammo.png",
 		"images/armor.png",
+		"images/antidote.png",
 	}
 
 	for _, path := range items {
@@ -129,11 +135,16 @@ func TestItemOutlineContrast(t *testing.T) {
 				t.Fatalf("failed to decode %s: %v", path, err)
 			}
 
+			bounds := img.Bounds()
+			if bounds.Dx() != 64 || bounds.Dy() != 64 {
+				t.Fatalf("%s bounds = %dx%d, want 64x64", path, bounds.Dx(), bounds.Dy())
+			}
+
 			solidCount := 0
 			darkContourCount := 0
 
-			for y := 0; y < 16; y++ {
-				for x := 0; x < 16; x++ {
+			for y := 0; y < 64; y++ {
+				for x := 0; x < 64; x++ {
 					r, g, b, a := img.At(x, y).RGBA()
 					if a > 0 {
 						solidCount++
@@ -148,8 +159,8 @@ func TestItemOutlineContrast(t *testing.T) {
 				}
 			}
 
-			if solidCount < 20 {
-				t.Errorf("item %s has too few solid pixels (%d / 256)", path, solidCount)
+			if solidCount < 320 {
+				t.Errorf("item %s has too few solid pixels (%d / 4096)", path, solidCount)
 			}
 			if darkContourCount == 0 {
 				t.Errorf("item %s lacks dark outline contrast pixels", path)
@@ -168,8 +179,11 @@ func TestAssetsLoadIdempotency(t *testing.T) {
 			GrassImage == nil || DirtImage == nil || WoodImage == nil ||
 			AsphaltImage == nil || ConcreteImage == nil || TileFloorImage == nil ||
 			WallImage == nil || TreeImage == nil || FenceImage == nil || DebrisImage == nil ||
+			TentImage == nil || StumpImage == nil || MushroomImage == nil || SignImage == nil ||
+			ElevationBlockImage == nil || ElevationRampImage == nil ||
 			WeaponImage == nil || AxeImage == nil || ShotgunImage == nil ||
-			AmmoImage == nil || ArmorImage == nil || FoodImage == nil || WaterImage == nil {
+			AmmoImage == nil || ArmorImage == nil || AntidoteImage == nil ||
+			FoodImage == nil || WaterImage == nil {
 			t.Fatalf("iteration %d: one or more asset pointers is nil after Load()", i)
 		}
 	}

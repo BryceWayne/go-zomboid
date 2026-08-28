@@ -1,11 +1,17 @@
-# Progress Log
+# Progress - m1_challenger_2
 
-**Agent**: `teamwork_preview_challenger_m1_2`
-**Last visited**: 2026-08-28T12:24:00Z
+Last visited: 2026-08-28T18:59:40Z
+Status: Challenge completed - Verdict FAIL
 
-- [x] Initialized workspace and briefing
-- [x] Test 1: Deterministic asset regeneration (SHA256 hash matching across 3 consecutive regeneration passes)
-- [x] Test 2: `internal/assets.Load()` validation (verified all 20 pointer handles are non-nil, correctly bounded, and idempotent)
-- [x] Test 3: Embedding integrity and build/test suite (`CC=gcc go test -v ./...` & `CC=gcc go build -o bin/game ./cmd/game` & `CC=gcc go vet ./...`)
-- [x] Test 4: Image format, color palette, bounding boxes, alpha checks, isometric aspect ratios, ground anchors, and dark contours
-- [x] Write handoff.md and report APPROVE verdict to parent
+## Checklist
+- [x] Initial setup & briefing
+- [x] Read ORIGINAL_REQUEST.md and PROJECT.md
+- [x] Inspect internal/assets and cmd/tools/genassets
+- [x] Run `go run ./cmd/tools/genassets` and `CC=gcc go test ./...`
+- [x] Test multi-threaded / repeated `assets.Load()` calls with race detector (`-race`)
+- [x] Verify all 27 exported pointers and bounds
+- [x] Verify pixel contrast and color saturation across all generated assets
+- [x] Verify deterministic output & edge cases in genassets
+- [x] Write challenge_report.md
+- [x] Write handoff.md
+- [x] Send completion message to parent

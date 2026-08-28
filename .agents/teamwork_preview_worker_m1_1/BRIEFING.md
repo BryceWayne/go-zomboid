@@ -1,55 +1,56 @@
-# BRIEFING — 2026-08-28T17:21:40Z
+# BRIEFING — 2026-08-28T18:55:00Z
 
 ## Mission
-Implement enhanced procedural pixel-art asset generation for all 20 game assets and integrate them with internal/assets/assets.go.
+Implement Milestone 1: High-Fidelity Asset Generation 4x Scaling across all 27 assets, regenerate PNGs, update tests, and verify passing.
 
 ## 🔒 My Identity
-- Archetype: worker
+- Archetype: implementer, qa, specialist
 - Roles: implementer, qa, specialist
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1_1
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: Milestone 1 - Procedural Sprite Enhancements & Asset Pipeline Integration
+- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Milestone: Milestone 1 - High-Fidelity Asset Generation 4x Scaling
 
 ## 🔒 Key Constraints
-- Authentic procedural pixel-art generation in cmd/tools/genassets/main.go. No dummy/hardcoded facade implementations.
-- Generate 20 distinct assets: 3 characters (16x32), 6 floor tiles (64x32), 4 vertical obstacles (64x64), 7 items/weapons/armor (16x16).
-- Update internal/assets/assets.go with all 20 image handles and loader logic.
-- Ensure CC=gcc go test ./... and CC=gcc go build -o bin/game ./cmd/game pass.
+- Update cmd/tools/genassets/main.go to generate all 27 assets under 4x dimensions:
+  - 6 Floor tiles @ 256x128 (grass, dirt, wood, asphalt, concrete, tile_floor)
+  - 10 Obstacles/Props @ 256x256 (wall, tree, fence, debris, tent, stump, mushroom, sign, elevation_block, elevation_ramp)
+  - 3 Character Entities @ 64x128 (player, zombie, runner) with grounding drop shadows in rows 116..124
+  - 8 Items/Weapons @ 64x64 (food, water, weapon, axe, shotgun, ammo, armor, antidote)
+- Regenerate all 27 PNG assets in internal/assets/images/ via `go run ./cmd/tools/genassets`
+- Update cmd/tools/genassets/genassets_test.go, internal/assets/assets_test.go, internal/assets/assets_stress_test.go
+- Run `CC=gcc go test -v ./cmd/tools/genassets/... ./internal/assets/...` and verify 100% pass
+- Zero integrity violations (no dummy data, hardcoding, facades)
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: 2026-08-28T17:20:07Z
+- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Updated: 2026-08-28T18:55:00Z
 
 ## Task Summary
-- **What to build**: Full procedural art generation script with drawing helpers, color manipulation, distinct visual details across all 20 assets, asset loader updates, and verification.
-- **Success criteria**: All 20 assets generated with genuine procedural algorithms; assets.go properly exposes and loads all 20 images; tests and build succeed.
-- **Interface contracts**: PROJECT.md, Explorer handoffs.
-- **Code layout**: cmd/tools/genassets/main.go, internal/assets/assets.go, internal/assets/images/*.png, internal/assets/assets_test.go.
+- **What to build**: High-fidelity procedural asset generators at 4x scaling (256x128 floors, 256x256 props, 64x128 characters, 64x64 items). Regenerated PNG assets and updated tests.
+- **Success criteria**: All 27 PNG assets regenerated, tests in genassets and assets packages pass cleanly.
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md
+- **Code layout**: cmd/tools/genassets/, internal/assets/
 
 ## Key Decisions Made
-- Replaced placeholder rectangle generators in `cmd/tools/genassets/main.go` with high-detail procedural art algorithms, including drawing primitives (`setPixel`, `fillRect`, `drawHLine`, `drawVLine`, `drawShadedRect`, `darken`, `lighten`, `blend`, `drawMatrix`, `addSelectiveOutline`).
-- Implemented all 20 required sprites with authentic pixel-art palettes, shading, and isometric proportions.
-- Updated `internal/assets/assets.go` to export all 20 `*ebiten.Image` handles and load them cleanly from embedded PNG files.
-- Added comprehensive unit tests in `internal/assets/assets_test.go` verifying valid dimensions, non-empty decoding, and non-transparent pixel content for all 20 assets.
+- Implemented high-fidelity vector rendering primitives (anti-aliased ellipses, Porter-Duff alpha blending, vector chevrons, wildflowers, rounded pebbles with specular shading, plank UV lanes with nailheads, asphalt striping, concrete joints, tile grout).
+- Character ground anchor shadows placed at (32, 122) spanning rows 116..124.
+- All 8 items generated with rich internal details and high-contrast dark border contours.
+- Updated all test suites for 27 assets with 4x dimensions and stress test criteria.
 
 ## Artifact Index
-- DISPATCH.md — Assignment instructions
-- progress.md — Liveness and task progress
-- handoff.md — Final handoff report
+- /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1_1/handoff.md — Final handoff report
 
 ## Change Tracker
 - **Files modified**:
-  - `cmd/tools/genassets/main.go`: Implemented full procedural pixel-art generation pipeline for 20 assets.
-  - `internal/assets/assets.go`: Exported and loaded 20 `*ebiten.Image` handles.
-  - `internal/assets/assets_test.go`: Added test suite for embedded asset decoding and dimensions.
-  - `internal/assets/images/*.png`: Generated 20 PNG asset files.
-- **Build status**: Pass (`CC=gcc go test ./...`, `CC=gcc go build -o bin/game ./cmd/game`)
-- **Pending issues**: None
+  - `cmd/tools/genassets/main.go`: Procedural 4x generator for all 27 assets.
+  - `cmd/tools/genassets/genassets_test.go`: Updated test registration and determinism checks for 27 assets.
+  - `internal/assets/assets_test.go`: Validates dimensions, PNG format, and non-nil pointers for all 27 assets.
+  - `internal/assets/assets_stress_test.go`: Bounds bleeding, grounding, and contrast stress tests for 4x assets.
+  - 27 PNG files in `internal/assets/images/`.
+- **Build status**: PASS (`CC=gcc go test -v ./cmd/tools/genassets/... ./internal/assets/...` passed 100%).
+- **Pending issues**: None.
 
 ## Quality Status
-- **Build/test result**: All tests passing cleanly (100% pass rate).
-- **Lint status**: `go vet ./...` passed with 0 warnings.
-- **Tests added/modified**: `internal/assets/assets_test.go` covering all 20 assets.
-
-## Loaded Skills
-- None
+- **Build/test result**: PASS (100% pass across all asset unit and stress tests).
+- **Lint status**: Zero errors.
+- **Tests added/modified**: Updated tests in `genassets_test.go`, `assets_test.go`, and `assets_stress_test.go` covering all 27 assets.

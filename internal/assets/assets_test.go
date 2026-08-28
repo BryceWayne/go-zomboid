@@ -15,37 +15,44 @@ func TestEmbeddedAssetDimensionsAndValidity(t *testing.T) {
 		width  int
 		height int
 	}{
-		// Entities (16x32)
-		{"images/player.png", 16, 32},
-		{"images/zombie.png", 16, 32},
-		{"images/runner.png", 16, 32},
+		// Character Entities (64x128)
+		{"images/player.png", 64, 128},
+		{"images/zombie.png", 64, 128},
+		{"images/runner.png", 64, 128},
 
-		// Floor Tiles (64x32)
-		{"images/grass.png", 64, 32},
-		{"images/dirt.png", 64, 32},
-		{"images/wood.png", 64, 32},
-		{"images/asphalt.png", 64, 32},
-		{"images/concrete.png", 64, 32},
-		{"images/tile_floor.png", 64, 32},
+		// Floor Tiles (256x128)
+		{"images/grass.png", 256, 128},
+		{"images/dirt.png", 256, 128},
+		{"images/wood.png", 256, 128},
+		{"images/asphalt.png", 256, 128},
+		{"images/concrete.png", 256, 128},
+		{"images/tile_floor.png", 256, 128},
 
-		// Vertical Obstacles (64x64)
-		{"images/wall.png", 64, 64},
-		{"images/tree.png", 64, 64},
-		{"images/fence.png", 64, 64},
-		{"images/debris.png", 64, 64},
+		// Vertical Obstacles & Props (256x256)
+		{"images/wall.png", 256, 256},
+		{"images/tree.png", 256, 256},
+		{"images/fence.png", 256, 256},
+		{"images/debris.png", 256, 256},
+		{"images/tent.png", 256, 256},
+		{"images/stump.png", 256, 256},
+		{"images/mushroom.png", 256, 256},
+		{"images/sign.png", 256, 256},
+		{"images/elevation_block.png", 256, 256},
+		{"images/elevation_ramp.png", 256, 256},
 
-		// Items, Weapons & Armor (16x16)
-		{"images/weapon.png", 16, 16},
-		{"images/axe.png", 16, 16},
-		{"images/shotgun.png", 16, 16},
-		{"images/ammo.png", 16, 16},
-		{"images/armor.png", 16, 16},
-		{"images/food.png", 16, 16},
-		{"images/water.png", 16, 16},
+		// Items, Weapons & Equipment (64x64)
+		{"images/food.png", 64, 64},
+		{"images/water.png", 64, 64},
+		{"images/weapon.png", 64, 64},
+		{"images/axe.png", 64, 64},
+		{"images/shotgun.png", 64, 64},
+		{"images/ammo.png", 64, 64},
+		{"images/armor.png", 64, 64},
+		{"images/antidote.png", 64, 64},
 	}
 
-	if len(expectedAssets) != 20 {
-		t.Fatalf("expected 20 assets to be tested, found %d", len(expectedAssets))
+	if len(expectedAssets) != 27 {
+		t.Fatalf("expected 27 assets to be tested, found %d", len(expectedAssets))
 	}
 
 	for _, tc := range expectedAssets {
@@ -93,46 +100,52 @@ func TestEmbeddedAssetDimensionsAndValidity(t *testing.T) {
 }
 
 func TestAssetsLoadAllPointersNonNil(t *testing.T) {
-	// Call Load()
 	Load()
 
 	handles := []struct {
-		name   string
-		img    *ebiten.Image
-		wantW  int
-		wantH  int
+		name  string
+		img   *ebiten.Image
+		wantW int
+		wantH int
 	}{
-		// Entities
-		{"PlayerImage", PlayerImage, 16, 32},
-		{"ZombieImage", ZombieImage, 16, 32},
-		{"RunnerImage", RunnerImage, 16, 32},
+		// Entities (64x128)
+		{"PlayerImage", PlayerImage, 64, 128},
+		{"ZombieImage", ZombieImage, 64, 128},
+		{"RunnerImage", RunnerImage, 64, 128},
 
-		// Floors
-		{"GrassImage", GrassImage, 64, 32},
-		{"DirtImage", DirtImage, 64, 32},
-		{"WoodImage", WoodImage, 64, 32},
-		{"AsphaltImage", AsphaltImage, 64, 32},
-		{"ConcreteImage", ConcreteImage, 64, 32},
-		{"TileFloorImage", TileFloorImage, 64, 32},
+		// Floors (256x128)
+		{"GrassImage", GrassImage, 256, 128},
+		{"DirtImage", DirtImage, 256, 128},
+		{"WoodImage", WoodImage, 256, 128},
+		{"AsphaltImage", AsphaltImage, 256, 128},
+		{"ConcreteImage", ConcreteImage, 256, 128},
+		{"TileFloorImage", TileFloorImage, 256, 128},
 
-		// Obstacles
-		{"WallImage", WallImage, 64, 64},
-		{"TreeImage", TreeImage, 64, 64},
-		{"FenceImage", FenceImage, 64, 64},
-		{"DebrisImage", DebrisImage, 64, 64},
+		// Obstacles & Props (256x256)
+		{"WallImage", WallImage, 256, 256},
+		{"TreeImage", TreeImage, 256, 256},
+		{"FenceImage", FenceImage, 256, 256},
+		{"DebrisImage", DebrisImage, 256, 256},
+		{"TentImage", TentImage, 256, 256},
+		{"StumpImage", StumpImage, 256, 256},
+		{"MushroomImage", MushroomImage, 256, 256},
+		{"SignImage", SignImage, 256, 256},
+		{"ElevationBlockImage", ElevationBlockImage, 256, 256},
+		{"ElevationRampImage", ElevationRampImage, 256, 256},
 
-		// Items
-		{"WeaponImage", WeaponImage, 16, 16},
-		{"AxeImage", AxeImage, 16, 16},
-		{"ShotgunImage", ShotgunImage, 16, 16},
-		{"AmmoImage", AmmoImage, 16, 16},
-		{"ArmorImage", ArmorImage, 16, 16},
-		{"FoodImage", FoodImage, 16, 16},
-		{"WaterImage", WaterImage, 16, 16},
+		// Items & Equipment (64x64)
+		{"FoodImage", FoodImage, 64, 64},
+		{"WaterImage", WaterImage, 64, 64},
+		{"WeaponImage", WeaponImage, 64, 64},
+		{"AxeImage", AxeImage, 64, 64},
+		{"ShotgunImage", ShotgunImage, 64, 64},
+		{"AmmoImage", AmmoImage, 64, 64},
+		{"ArmorImage", ArmorImage, 64, 64},
+		{"AntidoteImage", AntidoteImage, 64, 64},
 	}
 
-	if len(handles) != 20 {
-		t.Fatalf("expected 20 asset pointers to be checked, found %d", len(handles))
+	if len(handles) != 27 {
+		t.Fatalf("expected 27 asset pointers to be checked, found %d", len(handles))
 	}
 
 	for _, h := range handles {

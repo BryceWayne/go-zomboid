@@ -1,17 +1,13 @@
-# Progress Log
+# Progress - m1_challenger_1
 
-Last visited: 2026-08-28T17:23:30Z
+Last visited: 2026-08-28T18:57:30Z
 
-- [x] Initialized DISPATCH.md, BRIEFING.md, progress.md
-- [x] Inspected project structure and M1 interface contracts
-- [x] Executed `go run ./cmd/tools/genassets` (all 20 PNG textures generated)
-- [x] Executed empirical image verification harness:
-  - All 20 assets verified for dimensions (Characters 16x32, Floor 64x32, Vertical blocks 64x64, Items 16x16)
-  - Pixel corruption / decode integrity verified
-  - Non-empty content verified (bounding box and color palette distribution)
-  - Isometric diamond containment verified (exactly 1024 / 2048 non-transparent pixels, 0 out-of-bounds pixels)
-  - Ground anchor and outline contrast verified
-  - Deterministic regeneration verified (SHA256 hashes 100% matched across 3+ runs)
-- [x] Executed full test suite: `CC=gcc go test -v ./...` (All tests PASS uncached)
-- [x] Finalized handoff.md with verdict APPROVE
-- [x] Sent message to parent agent
+- [x] Initialized workspace and briefing
+- [x] Read ORIGINAL_REQUEST.md and PROJECT.md
+- [x] Inspect existing assets and genassets code
+- [x] Write and run empirical stress test harness (`internal/assets/empirical_challenger_test.go`)
+- [x] Verify determinism, dimensions, diamond alpha geometry, grounding, fill ratios
+- [x] Discovered and verified 2 defects in `images/dirt.png` (alpha puncture & outer diamond bleed)
+- [x] Execute test commands (`CC=gcc go test -p 1 -v ./internal/assets/... ./cmd/tools/genassets/...`)
+- [x] Write challenge_report.md and handoff.md with verdict FAIL
+- [x] Send completion message to parent

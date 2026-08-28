@@ -1,14 +1,17 @@
-## 2026-08-28T17:21:59Z
-You are a Challenger subagent (teamwork_preview_challenger_m1_2).
+## 2026-08-28T18:55:18Z
+You are m1_challenger_2.
 Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project Plan File: /home/bryce/code/go-zomboid/PROJECT.md
 Project root: /home/bryce/code/go-zomboid
-Original Request: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan: /home/bryce/code/go-zomboid/PROJECT.md
 
-Task:
-Stress test and verify Milestone 1 asset pipeline:
-1. Test regeneration determinism (hash matching or idempotent outputs across multiple runs).
-2. Validate that `internal/assets.Load()` successfully resolves all 20 image pointers without panic or nil values.
-3. Test embedding integrity and compilation with `CC=gcc go test -v ./...` and `CC=gcc go build -o bin/game ./cmd/game`.
-4. Provide your explicit verdict: APPROVE or REQUEST_CHANGES.
-Document your findings in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2/handoff.md` and message your parent.
+Mission:
+Empirically stress-test Milestone 1 asset generation pipeline and image validity.
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
+2. Independently verify:
+   - Multi-threaded / repeated `internal/assets.Load()` calls.
+   - All 27 exported pointers (`GrassImage`, `WallImage`, `PlayerImage`, `WeaponImage`, etc.) have correct `Bounds()`.
+   - Asset pixel contrast and color saturation checks.
+   - Run `go run ./cmd/tools/genassets` and `CC=gcc go test ./...`.
+3. Write your challenge report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2/challenge_report.md` and `handoff.md` with verdict: APPROVE or FAIL.
+4. Send a message to your parent when complete.

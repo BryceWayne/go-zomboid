@@ -1,17 +1,17 @@
-## 2026-08-28T17:21:59Z
+## 2026-08-28T18:55:18Z
 
-You are a Reviewer subagent (teamwork_preview_reviewer_m1_1).
+You are m1_reviewer_1.
 Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1
+Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
+Project Plan File: /home/bryce/code/go-zomboid/PROJECT.md
 Project root: /home/bryce/code/go-zomboid
-Original Request: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan: /home/bryce/code/go-zomboid/PROJECT.md
-Worker Handoff: /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1_1/handoff.md
 
-Task:
-Review Milestone 1 implementation:
-1. Examine code in `cmd/tools/genassets/main.go` and `internal/assets/assets.go`.
-2. Verify correctness, completeness, robustness, and interface conformance against `PROJECT.md` and `ORIGINAL_REQUEST.md`.
-3. Run `go run ./cmd/tools/genassets` and verify all 20 assets generate properly in `internal/assets/images/`.
-4. Run `CC=gcc go test -v ./...` and `CC=gcc go build -o bin/game ./cmd/game` and inspect test results.
-5. Provide your explicit verdict: APPROVE or REQUEST_CHANGES.
-Document your review in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/handoff.md` and message your parent.
+Mission:
+Review Milestone 1 implementation (High-Fidelity Asset Pipeline 4x Scaling).
+1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
+2. Read worker handoff: /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1_1/handoff.md.
+3. Review `cmd/tools/genassets/main.go`, `cmd/tools/genassets/genassets_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, and `internal/assets/assets_stress_test.go`.
+4. Check correctness, mathematical alignment of diamond equations (256x128 2:1 ratio), obstacle rendering (256x256), entity grounding drop shadows (64x128), items/weapons (64x64), and overlay geometry (chevrons, pebbles, planks, nails, stripes, concrete joints, tile grout).
+5. Run `go run ./cmd/tools/genassets` and `CC=gcc go test -v ./cmd/tools/genassets/... ./internal/assets/...`.
+6. Write your review report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/review.md` and `handoff.md` with a clear verdict: APPROVE or REQUEST_CHANGES.
+7. Send a message to your parent when complete.
