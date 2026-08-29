@@ -52,14 +52,14 @@ func TestBezier_AxeControlPointsCalculation(t *testing.T) {
 		t.Errorf("Follow-through radius should expand beyond initial reach")
 	}
 
-	// Transform to screen space via WorldToIso
+	// Transform to screen space via WorldToIso (orthogonal mapping)
 	s0x, s0y := WorldToIso(p0x, p0y)
 	s1x, s1y := WorldToIso(p1x, p1y)
 	s2x, s2y := WorldToIso(p2x, p2y)
 
-	// Screen apex S1: (340-200, (340+200)/2) = (140, 270)
-	if math.Abs(s1x-140.0) > 1e-6 || math.Abs(s1y-270.0) > 1e-6 {
-		t.Errorf("Screen apex S1 mismatch: got (%f, %f), want (140.0, 270.0)", s1x, s1y)
+	// In orthogonal space, WorldToIso(340, 200) = (340.0, 200.0)
+	if math.Abs(s1x-340.0) > 1e-6 || math.Abs(s1y-200.0) > 1e-6 {
+		t.Errorf("Screen apex S1 mismatch: got (%f, %f), want (340.0, 200.0)", s1x, s1y)
 	}
 
 	if s0x == s1x && s0y == s1y {

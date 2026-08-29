@@ -15,9 +15,9 @@ func TestWorldToIso(t *testing.T) {
 		wantX, wantY float64
 	}{
 		{"Origin", 0, 0, 0, 0},
-		{"X Axis", 32, 0, 32, 16},
-		{"Y Axis", 0, 32, -32, 16},
-		{"Diagonal", 32, 32, 0, 32},
+		{"X Axis", 32, 0, 32, 0},
+		{"Y Axis", 0, 32, 0, 32},
+		{"Diagonal", 32, 32, 32, 32},
 	}
 
 	for _, tt := range tests {

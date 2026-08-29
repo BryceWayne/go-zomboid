@@ -17,12 +17,12 @@ var imageFS embed.FS
 var loadOnce sync.Once
 
 var (
-	// Entity Sprites (16x32)
+	// Entity Sprites (64x128)
 	PlayerImage *ebiten.Image
 	ZombieImage *ebiten.Image
 	RunnerImage *ebiten.Image
 
-	// Floor Tiles (64x32)
+	// Floor Tiles (256x128)
 	GrassImage     *ebiten.Image
 	DirtImage      *ebiten.Image
 	WoodImage      *ebiten.Image
@@ -30,7 +30,7 @@ var (
 	ConcreteImage  *ebiten.Image
 	TileFloorImage *ebiten.Image
 
-	// Vertical Obstacles / Props (64x64)
+	// Vertical Obstacles / Props (256x256)
 	WallImage           *ebiten.Image
 	TreeImage           *ebiten.Image
 	FenceImage          *ebiten.Image
@@ -42,7 +42,7 @@ var (
 	ElevationBlockImage *ebiten.Image
 	ElevationRampImage  *ebiten.Image
 
-	// Item / Weapon / Armor Sprites (16x16)
+	// Item / Weapon / Armor Sprites (64x64)
 	WeaponImage   *ebiten.Image
 	AxeImage      *ebiten.Image
 	ShotgunImage  *ebiten.Image
@@ -81,32 +81,32 @@ var (
 
 func Load() {
 	loadOnce.Do(func() {
-		// Entities
-		PlayerImage = loadEbitenImage("images/Zombie Apocalypse Tileset/Organized separated sprites/Player Character Walking Animation Frames/Zombie-Tileset---_0484_Capa-485.png")
-		ZombieImage = loadEbitenImage("images/Zombie Apocalypse Tileset/Organized separated sprites/Skinny Walking Zombie Animation/Zombie-Tileset---_0394_Capa-395.png")
-		RunnerImage = loadEbitenImage("images/Zombie Apocalypse Tileset/Organized separated sprites/Skinny Walking Zombie Animation/Zombie-Tileset---_0396_Capa-397.png")
+		// Entities (64x128)
+		PlayerImage = loadEbitenImage("images/player.png")
+		ZombieImage = loadEbitenImage("images/zombie.png")
+		RunnerImage = loadEbitenImage("images/runner.png")
 
-		// Floor Tiles
-		GrassImage = loadEbitenImage("images/Small Forest/Grass/Grass-1.png")
-		DirtImage = loadEbitenImage("images/Small Forest/Grass/Grass-2.png")
-		WoodImage = loadEbitenImage("images/Small Forest/Grass/Grass-2.png")
-		AsphaltImage = loadEbitenImage("images/Small Forest/Grass/Grass-2.png")
-		ConcreteImage = loadEbitenImage("images/Small Forest/Grass/Grass-2.png")
-		TileFloorImage = loadEbitenImage("images/Small Forest/Grass/Grass-2.png")
+		// Floor Tiles (256x128)
+		GrassImage = loadEbitenImage("images/grass.png")
+		DirtImage = loadEbitenImage("images/dirt.png")
+		WoodImage = loadEbitenImage("images/wood.png")
+		AsphaltImage = loadEbitenImage("images/asphalt.png")
+		ConcreteImage = loadEbitenImage("images/concrete.png")
+		TileFloorImage = loadEbitenImage("images/tile_floor.png")
 
-		// Vertical Obstacles
-		WallImage = loadEbitenImage("images/Small Forest/Fences/Wooden fence/Wooden-fence-2.png")
-		TreeImage = loadEbitenImage("images/Small Forest/Trees/Tree-1/Tree-1-1.png")
-		FenceImage = loadEbitenImage("images/Small Forest/Fences/Wooden fence/Wooden-fence-2.png")
-		DebrisImage = loadEbitenImage("images/Small Forest/Stones/Stone-2.png")
-		TentImage = loadEbitenImage("images/Small Forest/Bench and chest/Bench.png")
-		StumpImage = loadEbitenImage("images/Small Forest/Bushes/Stump.png")
-		MushroomImage = loadEbitenImage("images/Small Forest/Flowers/Flower-1.png")
-		SignImage = loadEbitenImage("images/Small Forest/Stones/Stone-1.png")
-		ElevationBlockImage = loadEbitenImage("images/Small Forest/Stones/Stone-2.png")
-		ElevationRampImage = loadEbitenImage("images/Small Forest/Stones/Stone-2.png")
+		// Vertical Obstacles & Props (256x256)
+		WallImage = loadEbitenImage("images/wall.png")
+		TreeImage = loadEbitenImage("images/tree.png")
+		FenceImage = loadEbitenImage("images/fence.png")
+		DebrisImage = loadEbitenImage("images/debris.png")
+		TentImage = loadEbitenImage("images/tent.png")
+		StumpImage = loadEbitenImage("images/stump.png")
+		MushroomImage = loadEbitenImage("images/mushroom.png")
+		SignImage = loadEbitenImage("images/sign.png")
+		ElevationBlockImage = loadEbitenImage("images/elevation_block.png")
+		ElevationRampImage = loadEbitenImage("images/elevation_ramp.png")
 
-		// Items / Weapons / Armor
+		// Items / Weapons / Armor (64x64)
 		WeaponImage = loadEbitenImage("images/weapon.png")
 		AxeImage = loadEbitenImage("images/axe.png")
 		ShotgunImage = loadEbitenImage("images/shotgun.png")

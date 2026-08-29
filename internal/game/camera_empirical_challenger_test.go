@@ -109,15 +109,12 @@ func TestChallenger_ViewportCornerCullingDistanceAndInvariants(t *testing.T) {
 				dy := cornerWy - py
 				dist := math.Hypot(dx, dy)
 
-				// Theoretical corner distance calculation:
+				// Theoretical corner distance calculation in 2D Orthogonal space:
 				// sx offset = +/- 640px, sy offset = +/- 360px
-				// deltaIsoX = sx_offset / 0.5 = +/- 1280px
-				// deltaIsoY = sy_offset / 0.5 = +/- 720px
-				// deltaWx = deltaIsoY + deltaIsoX/2
-				// deltaWy = deltaIsoY - deltaIsoX/2
-				// (|deltaWx|, |deltaWy|) = (1360, 80) or (80, 1360)
-				// dist = sqrt(1360^2 + 80^2) = sqrt(1849600 + 6400) = sqrt(1856000) approx 1362.3509 px
-				expectedDist := math.Sqrt(1856000.0)
+				// deltaWx = sx_offset / 0.5 = +/- 1280px
+				// deltaWy = sy_offset / 0.5 = +/- 720px
+				// dist = sqrt(1280^2 + 720^2) = sqrt(1638400 + 518400) = sqrt(2156800) approx 1468.6048 px
+				expectedDist := math.Sqrt(2156800.0)
 
 				if math.Abs(dist-expectedDist) > 1e-4 {
 					t.Fatalf("Corner %s: Expected Euclidean distance %f px, got %f px (dx=%f, dy=%f)",

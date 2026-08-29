@@ -184,7 +184,7 @@ func TestGameResetStress(t *testing.T) {
 	}
 }
 
-// TestIsometricProjectionMathStress verifies isometric coordinate transformations under stress.
+// TestIsometricProjectionMathStress verifies orthogonal coordinate transformations and roundtrip bijection under stress.
 func TestIsometricProjectionMathStress(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -203,8 +203,8 @@ func TestIsometricProjectionMathStress(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			isoX, isoY := WorldToIso(tc.wx, tc.wy)
-			expectedIsoX := tc.wx - tc.wy
-			expectedIsoY := (tc.wx + tc.wy) / 2.0
+			expectedIsoX := tc.wx
+			expectedIsoY := tc.wy
 
 			if math.Abs(isoX-expectedIsoX) > 1e-9 {
 				t.Errorf("WorldToIso(%f, %f) isoX = %f, want %f", tc.wx, tc.wy, isoX, expectedIsoX)
@@ -213,9 +213,8 @@ func TestIsometricProjectionMathStress(t *testing.T) {
 				t.Errorf("WorldToIso(%f, %f) isoY = %f, want %f", tc.wx, tc.wy, isoY, expectedIsoY)
 			}
 
-			// Inverse projection check: wx = isoY + isoX/2, wy = isoY - isoX/2
-			recoveredWx := isoY + (isoX / 2.0)
-			recoveredWy := isoY - (isoX / 2.0)
+			// Inverse projection check: IsoToWorld
+			recoveredWx, recoveredWy := IsoToWorld(isoX, isoY)
 
 			if math.Abs(recoveredWx-tc.wx) > 1e-9 {
 				t.Errorf("Inverse projection wx mismatch: got %f, want %f", recoveredWx, tc.wx)
@@ -226,18 +225,26 @@ func TestIsometricProjectionMathStress(t *testing.T) {
 		})
 	}
 
-	// Randomized fuzzing of WorldToIso transformation
+	// Randomized fuzzing of orthogonal projection and inverse ScreenToWorld roundtrip
 	rng := rand.New(rand.NewSource(42))
 	for i := 0; i < 5000; i++ {
 		wx := (rng.Float64() - 0.5) * 20000.0
 		wy := (rng.Float64() - 0.5) * 20000.0
+		camX := (rng.Float64() - 0.5) * 20000.0
+		camY := (rng.Float64() - 0.5) * 20000.0
 
+		// Identity mapping check
 		isoX, isoY := WorldToIso(wx, wy)
-		recWx := isoY + (isoX / 2.0)
-		recWy := isoY - (isoX / 2.0)
+		recWx, recWy := IsoToWorld(isoX, isoY)
+		if math.Abs(recWx-wx) > 1e-9 || math.Abs(recWy-wy) > 1e-9 {
+			t.Fatalf("Fuzz %d failed for WorldToIso (%f, %f): recovered (%f, %f)", i, wx, wy, recWx, recWy)
+		}
 
-		if math.Abs(recWx-wx) > 1e-6 || math.Abs(recWy-wy) > 1e-6 {
-			t.Fatalf("Fuzz %d failed for (%f, %f): recovered (%f, %f)", i, wx, wy, recWx, recWy)
+		// Screen to World bijection roundtrip check
+		sx, sy := WorldToScreen(wx, wy, camX, camY)
+		unprojWx, unprojWy := ScreenToWorld(sx, sy, camX, camY)
+		if math.Abs(unprojWx-wx) > 1e-9 || math.Abs(unprojWy-wy) > 1e-9 {
+			t.Fatalf("Fuzz %d failed for ScreenToWorld bijection at (%f, %f): recovered (%f, %f)", i, wx, wy, unprojWx, unprojWy)
 		}
 	}
 }

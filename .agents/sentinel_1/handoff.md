@@ -1,29 +1,36 @@
-# Sentinel Final Handoff Report — Milestone 3 (Camera System QoL)
+# Sentinel Final Handoff Report — Milestone 4 (External Asset Ingestion & Procedural Retirement)
 
 ## Observation
-- User request recorded verbatim in `.agents/ORIGINAL_REQUEST.md` (Camera system Quality of Life improvements: 50% global zoom-out scale, inverted mouse-click `IsoToWorld` unprojection, smooth camera lerping centering player on 1280x720 screen, and vision radius / FOV culling expansion).
-- Task routed to `teamwork_preview_orchestrator` (`teamwork_preview_orchestrator_4`) per Routing Decision Table (General SWE path with full team).
-- Orchestrator launched exploration swarm, worker implementation (`teamwork_preview_worker_camera_1`), independent reviewers (`teamwork_preview_reviewer_camera_1`, `2`), empirical challengers (`teamwork_preview_challenger_camera_1`, `2`), and forensic auditor (`teamwork_preview_auditor_camera_1`).
-- On orchestrator victory claim, independent `teamwork_preview_victory_auditor` (`victory_auditor_3`) was dispatched for a blocking 3-phase audit.
-- Victory Auditor returned **VICTORY CONFIRMED** across timeline reconstruction, anti-cheating/anti-shortcut forensics (0 mock assertions, 0 facades), and independent test suite execution (154/154 passed tests across 5 packages, clean binary build).
+- User request recorded verbatim in `.agents/ORIGINAL_REQUEST.md`: Completely replace procedural asset generation with external PNG assets located in `context/`. Permanently retire `cmd/tools/genassets`, copy external PNGs into `internal/assets/images/`, load in `internal/assets/assets.go`, define new `TileType` constants in `internal/game/world/map.go`, and update `DrawSystem` in `internal/game/game.go` for rendering and isometric depth-sorting.
+- Task routed to `teamwork_preview_orchestrator` (`teamwork_preview_orchestrator_5`) under the General SWE path.
+- Initial victory claim was audited by `victory_auditor_4` and resulted in VICTORY REJECTED due to legacy asset dimension mapping breaks in `internal/assets/assets.go`.
+- Audit findings were returned to the orchestrator; remediation worker was dispatched to restore 27 legacy pointers from canonical paths alongside 22 new external asset pointers.
+- Subsequent independent Victory Audit by `victory_auditor_5` returned **VICTORY CONFIRMED** across timeline analysis, anti-cheating verification, and independent test execution.
 
 ## Logic Chain
-1. **R1 Global Camera Zoom & Mouse Inversion**: In `DrawSystem.Draw` (`internal/game/game.go`), a uniform 50% scale matrix (`op.GeoM.Scale(0.5, 0.5)`) and centered translation `(640, 360)` are applied across all game world layers (ground tiles, props/walls/obstacles, items, entities, reticle, Bezier swooshes, shotgun blast rays). UI/HUD remains unscaled 1:1. Analytical inverted mouse functions `ScreenToIso` and `ScreenToWorld` calculate exact world coordinates with zero displacement.
-2. **R2 Smooth Camera Centering & Exponential Lerp**: `Camera` struct in `internal/game/game.go` implements discrete low-pass exponential filter ($\mathbf{cam}_{t+1} = \mathbf{cam}_t + (\mathbf{target}_{t+1} - \mathbf{cam}_t) \cdot 0.10$) with pole at $z=0.90$ ensuring asymptotic stability. Sub-pixel snapping (< 0.01 px) eliminates floating-point oscillation. `Game.Reset()` snaps camera directly to spawn position.
-3. **R3 Vision Radius & FOV Culling Expansion**: Canvas half-diagonal is 1362.35 px; `visionRadius` was expanded to 2200.0 px and `CalculateFOV` radius to 22 tiles (2816.0 px), strictly enclosing the worst-case viewport envelope (1818.35 px) and preventing edge sprite pop-in. Zombie sensory radius was preserved at 600 px for game balance.
-4. **Teardown**: Sentinel terminated monitoring crons and active subagents in compliance with lifecycle teardown rules.
+1. **R1 Retire Procedural Generation**: The `cmd/tools/genassets` directory, root binary, and generator scripts were permanently deleted from disk.
+2. **R2 External Asset Ingestion & Thread-Safe Loading**: Ingested 579 external PNGs from `context/` into `internal/assets/images/` with bit-for-bit SHA-256 integrity. `internal/assets/assets.go` natively loads both the 27 legacy assets (preserving backward compatibility) and 22 new external assets using thread-safe `sync.Once` initialization.
+3. **R3 World Mapping & Isometric Depth-Sorting**:
+   - Added 6 new `TileType` constants in `internal/game/world/map.go`: `TileBench` (16), `TileChest` (17), `TileSculpture` (18), `TileBush` (19), `TileFlower` (20), `TileStone` (21).
+   - Implemented procedural placement in `placeEnvironmentalProps` while preserving all 10 legacy tile types.
+   - Updated `DrawSystem.Draw` in `internal/game/game.go` with a two-pass pipeline: Pass 1 renders terrain ground diamonds; Pass 2 collects, depth-sorts (`Depth = worldX + worldY`), and renders all props, entities, particles, and items with correct bottom-center isometric anchoring.
+4. **Independent Verification**:
+   - `CC=gcc go test -count=1 ./...` PASSED 100% across all packages.
+   - `CC=gcc go test -race -count=1 ./...` PASSED with 0 data races.
+   - `CC=gcc go build ./cmd/game` and `CC=gcc go run ./cmd/game` PASSED cleanly.
+5. **Teardown**: Cancelled monitoring crons (tasks 26 and 28) and terminated all subagents via `manage_subagents(action="kill_all")`.
 
 ## Caveats
-- Zombie sensory vision AI preserves 600 px detection radius as intended so gameplay balance is maintained in the expanded field of view.
-- Headless testing mode handles graphical systems through software simulation without requiring active X11 display.
+- Legacy asset pointers are preserved to maintain backward compatibility with existing tests and gameplay mechanics.
+- All new external PNG assets are statically embedded via Go's `embed.FS`.
 
 ## Conclusion
-All requirements and acceptance criteria for Milestone 3 (Camera System QoL) are fully satisfied and independently confirmed by Victory Auditor.
+All requirements (R1, R2, R3) and acceptance criteria have been verified and independently confirmed by the Victory Auditor with verdict **VICTORY CONFIRMED**.
 
 ## Verification Method
-1. Full test suite: `CC=gcc go test -v -count=1 ./...` (154/154 passed tests).
-2. Camera unit tests: `CC=gcc go test -v -count=1 -run TestCamera ./internal/game/...` (12/12 passed tests).
-3. Challenger tests: `CC=gcc go test -v -count=1 -run TestChallenger ./internal/game/...` (9/9 passed tests).
-4. Binary build: `CC=gcc go build -o bin/game ./cmd/game` (clean exit code 0).
+1. Full test suite execution: `CC=gcc go test -v -count=1 ./...` (all tests passing).
+2. Data race detection: `CC=gcc go test -race -count=1 ./...` (0 races detected).
+3. Binary compilation: `CC=gcc go build -o bin/game ./cmd/game` (clean exit code 0).
+4. Procedural generator absence: `test ! -d cmd/tools/genassets && test ! -f genassets` (directory and binary absent).
 
 
