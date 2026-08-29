@@ -1,18 +1,11 @@
-## 2026-08-28T17:43:43Z
-You are a Challenger subagent (teamwork_preview_challenger_m4_1).
-Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1
-Project root: /home/bryce/code/go-zomboid
-Original Request: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan: /home/bryce/code/go-zomboid/PROJECT.md
+## 2026-08-29T17:09:00Z
+You are Challenger 1 for Milestone 4: Requirement R4 (Environmental Destruction & Resource Drops).
+Your working directory is /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1.
+Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
+Read Worker 3's handoff report at /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m4_1/handoff.md.
 
-Task:
-Empirically challenge and stress test Milestone 4 weapon & combat mechanics:
-1. Write/execute empirical test harnesses verifying:
-   - Axe cleave multi-kill sweep in dense zombie formations.
-   - Shotgun spread cone geometric boundary coverage ($\pm 22.5^\circ$, 160px reach).
-   - Exact ammo consumption (1 item per blast).
-   - Exact 400px noise radius horde aggro triggering `z.Chasing = true`.
-   - Dry fire fallback when ammo count is 0.
-2. Run `CC=gcc go test -v ./...`.
-3. Provide your explicit verdict: APPROVE or REQUEST_CHANGES.
-Document your findings in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/handoff.md` and message your parent.
+Empirically challenge and stress-test the environmental destruction system:
+1. Write adversarial tests in `internal/game/world/destruction_adversarial_test.go` stress-testing concurrent destruction of dozens of barriers, rapid weapon attacks, breaking weapons on barriers, and verifying solidity/FOV updates.
+2. Verify all perimeter tiles are strictly indestructible under all attack forms.
+3. Run `C_INCLUDE_PATH=/usr/include CGO_CFLAGS="-I/usr/include" CC=gcc go test -v ./...`.
+4. Write your findings and verdict (APPROVE or REQUEST_CHANGES) to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/handoff.md` and send a message back when complete.

@@ -141,6 +141,9 @@ func Load() {
 		// External Tilesets
 		LabTilesetImage = loadEbitenImage("images/Lab/Inside_C.png")
 		ZombieTilesetImage = loadEbitenImage("images/Zombie Apocalypse Tileset/Zombie Apocalypse Tileset Reference.png")
+
+		// Autotiles & Terrain Overlays
+		initAutotiles()
 	})
 }
 

@@ -1,52 +1,65 @@
-# BRIEFING — 2026-08-28T12:43:20-05:00
+# BRIEFING — 2026-08-29T17:08:20Z
 
 ## Mission
-Milestone 4 - Implement Weapon Expansion (Axe, Shotgun, Bat, Unarmed) & Combat Mechanics & HUD & Unit Tests
+Implement Milestone 4: Requirement R4 (Environmental Destruction & Resource Drops) for go-zomboid.
 
 ## 🔒 My Identity
-- Archetype: worker
+- Archetype: Worker
 - Roles: implementer, qa, specialist
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m4_1
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: Milestone 4 - Weapon Expansion & Combat Mechanics Implementation
+- Original parent: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Milestone: Milestone 4 (Requirement R4)
 
 ## 🔒 Key Constraints
-- Write ownership: internal/ecs/components.go, internal/game/game.go, internal/game/combat_test.go
-- Do not hardcode test results or create facade implementations
-- Genuine implementation with thorough behavior-driven tests
-- CC=gcc go test -v ./... and CC=gcc go build -o bin/game ./cmd/game must pass
+- Tile durability tracking in `world.Map`.
+- `IsDestructible(x, y int) bool` (fences, interior walls, trees, stumps, benches destructible; perimeter boundary walls indestructible).
+- `GetTileMaxDurability(t TileType) int`, `GetTileDurability(x, y int) int`.
+- `DamageTile(x, y int, amount int) (destroyed bool, dropType string)` clearing collision & vision blocking, replacing with walkable ground, returning "wood".
+- In `internal/game/game.go`, integrate barrier chopping into melee attacks:
+  - Axe: dmg 2, Club/Weapon: dmg 1, Shotgun: dmg 2, Unarmed: dmg 0 (cannot damage barriers).
+  - Melee attack reach checks destructible tiles, damages them, decrements weapon durability, plays hit sound.
+  - Spawns `ecs.Item{Type: "wood"}` entity at tile center on destruction.
+  - Player stepping within 64px collects "wood" item.
+  - "wood" rendering and HUD inventory display supported.
+- Unit and integration tests in `internal/game/world/destruction_test.go` and `internal/game/destruction_combat_test.go`.
+- Real logic only, no cheating or facades.
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: not yet
+- Conversation ID: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Updated: 2026-08-29T17:08:20Z
 
 ## Task Summary
-- **What to build**: Weapon expansion supporting Fire Axe (32px cleave reach/radius, 12 durability), Shotgun (ammo consumption, 160px spread cone +-22.5 deg, 400px noise pulse, dry fire shove), Spiked Bat (24px reach, 5 durability), Unarmed fist shove, Weapon HUD text & reticle styling, and comprehensive unit tests in `combat_test.go`.
-- **Success criteria**: All unit tests pass, compilation succeeds, game launches cleanly.
-- **Interface contracts**: PROJECT.md
-- **Code layout**: internal/ecs, internal/game
+- **What to build**: Environmental destruction mechanics, tile durability, resource drops (wood), melee chopping interactions, item pickup, and comprehensive test suite.
+- **Success criteria**: All requirements implemented, all tests pass, binary builds cleanly.
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, survey blueprint.
+- **Code layout**: internal/game, internal/game/world.
+
+## Key Decisions Made
+- `world.Map.TileDurability` implemented as `map[Point]int` tracking degraded tile health.
+- `IsDestructible(x, y)` protects map perimeter boundaries while allowing interior fences, walls, trees, stumps, and benches to be chopped.
+- `DamageTile` resets tile to `TileWoodFloor` for walls, `TileGrass` for fences/trees/stumps/benches, removing solidity and vision blocking.
+- Combat routine in `game.go` calculates barrier chopping for Axe (dmg 2), Club/Weapon (dmg 1), Shotgun (dmg 2), and Unarmed (dmg 0).
+- Destructed tiles instantiate `ecs.Item{Type: "wood"}` via ECS map, collected into player inventory when stepping within 64px.
+
+## Artifact Index
+- DISPATCH.md — assignment details
+- BRIEFING.md — situational awareness
+- progress.md — liveness and step progress
+- handoff.md — comprehensive handoff report
 
 ## Change Tracker
 - **Files modified**:
-  - `internal/ecs/components.go`: Added `WeaponType string` to `ecs.Player`.
-  - `internal/game/game.go`: Added weapon equipping (keys 1-9 for weapon, axe, shotgun), combat handling for shotgun (ammo consumption, spread cone, 400px noise pulse, dry fire shove), fire axe (32px cleave reach/radius), bat (24px reach), unarmed shove, reticle color coding, and HUD weapon text at Y=95.
-  - `internal/game/combat_test.go`: Created comprehensive 16-test suite covering all combat mechanics.
-- **Build status**: CC=gcc go test ./... PASS, CC=gcc go build -o bin/game ./cmd/game PASS
+  - `internal/game/world/map.go`: Durability tracking, `IsDestructible`, `GetTileMaxDurability`, `GetTileDurability`, `DamageTile`.
+  - `internal/game/game.go`: Barrier chopping integration in attack routines, `assets.WoodImage` item rendering in DrawSystem.
+  - `internal/game/world/destruction_test.go`: 9 comprehensive unit tests for map durability, destruction, and perimeter invariants.
+  - `internal/game/destruction_combat_test.go`: 7 comprehensive combat & integration tests for weapon chopping, wood drops, and breach traversal.
+- **Build status**: All unit & integration tests pass (exit code 0); `bin/game` compiles cleanly.
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: PASS (16 new unit tests in combat_test.go + all existing project tests pass)
-- **Lint status**: Clean
-- **Tests added/modified**: `internal/game/combat_test.go` (16 unit tests)
+- **Build/test result**: Pass (100% tests passing across repository)
+- **Lint status**: Clean (no unused variables or compile warnings)
+- **Tests added/modified**: 16 new test functions across `world/destruction_test.go` and `destruction_combat_test.go`
 
-## Key Decisions Made
-- Use exact geometric spread cone cos(theta) >= 0.9238795325112867 (approx math.Cos(22.5 deg)) with point-blank range < 24px.
-- Use 400px noise pulse to set Chasing=true and WanderTimer=0 for all zombies within 400px on shotgun firing with ammo.
-- Display weapon status at Y=95 with weapon name, durability, and ammo count when shotgun equipped.
-- Dry fire on shotgun when out of ammo performs defensive butt shove without deducting durability or alerting horde.
-
-## Artifact Index
-- .agents/teamwork_preview_worker_m4_1/DISPATCH.md
-- .agents/teamwork_preview_worker_m4_1/BRIEFING.md
-- .agents/teamwork_preview_worker_m4_1/progress.md
-- .agents/teamwork_preview_worker_m4_1/handoff.md
+## Loaded Skills
+- None

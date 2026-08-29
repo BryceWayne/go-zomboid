@@ -1,58 +1,63 @@
-# BRIEFING — 2026-08-28T17:44:30Z
+# BRIEFING — 2026-08-29T17:10:00Z
 
 ## Mission
-Review and adversarial stress-test Milestone 4 (Weapons, Combat Variety, Ranged Systems, Durability) in `go-zomboid`.
+Review Milestone 4 (Requirement R4: Environmental Destruction & Resource Drops) implementation and adversarial validation.
 
 ## 🔒 My Identity
-- Archetype: reviewer_and_critic
+- Archetype: reviewer / critic
 - Roles: reviewer, critic
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m4_1
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: milestone_4_review
+- Original parent: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Milestone: Milestone 4 (R4 Environmental Destruction & Resource Drops)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Check for integrity violations (dummy implementations, hardcoded tests, shortcuts)
-- Issue clear verdict: APPROVE or REQUEST_CHANGES
+- Thoroughly check for integrity violations (hardcoding, shortcuts, fake tests)
+- Verify durability tracking, perimeter wall boundary protection, collision & vision clearing, wood resource drops & pickup, chopping damages & durability consumption, and rendering
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: 2026-08-28T17:43:43Z
+- Conversation ID: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Updated: 2026-08-29T17:10:00Z
 
 ## Review Scope
 - **Files to review**:
-  - `internal/ecs/components.go`
+  - `internal/game/world/map.go`
   - `internal/game/game.go`
-  - `internal/game/combat_test.go`
-  - `.agents/teamwork_preview_worker_m4_1/handoff.md`
-- **Interface contracts**: `PROJECT.md`, `.agents/ORIGINAL_REQUEST.md`
-- **Review criteria**: correctness, completeness, robustness, integrity, performance, test coverage
+  - `internal/game/world/destruction_test.go`
+  - `internal/game/destruction_combat_test.go`
+  - `internal/assets/assets.go`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md
+- **Review criteria**: correctness, integrity, adversarial robustness, style/conformance, full test suite pass
 
 ## Review Checklist
 - **Items reviewed**:
-  - `internal/ecs/components.go:28-48` (`WeaponType` field)
-  - `internal/game/game.go:277-536, 1005-1027, 1084-1104` (Combat & HUD)
-  - `internal/game/combat_test.go` (16 comprehensive unit tests)
+  - `world.Map.TileDurability` and max durabilities (Fence=2, Tree=3, Stump=2, Bench=2, Wall=3)
+  - `world.Map.IsDestructible` perimeter wall protection
+  - `world.Map.DamageTile` durability degradation and floor/grass replacement
+  - Collision & FOV raycasting unblocking on destroyed barriers
+  - Weapon damage values (Axe=2, Club=1, Shotgun=2, Unarmed=0)
+  - Weapon durability wear and breaking / unequipping to fists
+  - Wood resource entity spawning at tile center `(float64(tx)*128+64, float64(ty)*128+64)`
+  - Item pickup within 64px into inventory slot
+  - Wood item sprite loading (`assets.WoodImage`) and rendering in `DrawSystem`
 - **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified via automated test runs and static analysis.
+- **Unverified claims**: None
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Shotgun zero facing vector division-by-zero risk: PASSED (protected via `math.Hypot` length check falling back to `(1,0)`).
-  - Shotgun point-blank zombie kill: PASSED (hit confirmed if `< 24px` regardless of angle).
-  - Shotgun dry-fire out-of-ammo fallback: PASSED (performs 24px shove, no ammo consumption, no durability drop, no acoustic noise pulse).
-  - Fire Axe wide lateral cleave: PASSED (cleaves all zombies within 32px reach and 32px radius simultaneously).
-  - Weapon durability degradation & zero-durability breakdown to unarmed: PASSED across Bat (5), Axe (12), and Shotgun (15).
-  - Ammo preservation in hotbar: PASSED (pressing 1-9 on `"ammo"` does not equip or consume ammo).
-  - Weapon HUD format and dynamic ammo counter: PASSED.
-- **Vulnerabilities found**: None.
-- **Untested angles**: None.
+  - Zero/negative damage handled gracefully without state corruption: PASS
+  - Perimeter boundaries indestructible under arbitrary damage: PASS
+  - Boundary and out-of-bounds coordinates safe from panics: PASS
+  - Lazy map initialization safe from nil pointer dereferences: PASS
+  - Rapid repeated hits correctly destroy tiles and delete tracking entries: PASS
+  - Traversal and vision through breached obstacles verified: PASS
+- **Vulnerabilities found**: None
+- **Untested angles**: None within milestone scope
 
 ## Key Decisions Made
-- Confirmed full compliance with all interface contracts and project requirements.
-- Issued verdict: APPROVE.
+- Issue APPROVE verdict for Milestone 4 (Requirement R4) based on comprehensive verification, genuine implementation, and 100% test pass rate.
 
 ## Artifact Index
-- `.agents/teamwork_preview_reviewer_m4_1/handoff.md` — Final review report and verdict
-- `.agents/teamwork_preview_reviewer_m4_1/progress.md` — Liveness heartbeat
+- `.agents/teamwork_preview_reviewer_m4_1/handoff.md` — Final review and challenge report
+- `.agents/teamwork_preview_reviewer_m4_1/progress.md` — Liveness and progress tracking

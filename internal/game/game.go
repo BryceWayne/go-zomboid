@@ -158,6 +158,9 @@ func (g *Game) Update() error {
 					break
 				}
 			}
+			if g.draggingSlot == -1 && cx >= 1070 && cx <= 1270 && cy >= 265 && cy <= 295 {
+				g.draggingSlot = 9 // Dedicated Equipped Slot
+			}
 		}
 	} else {
 		if g.draggingSlot != -1 {
@@ -169,12 +172,75 @@ func (g *Game) Update() error {
 					break
 				}
 			}
+			if dropSlot == -1 && cx >= 1070 && cx <= 1270 && cy >= 265 && cy <= 295 {
+				dropSlot = 9 // Dedicated Equipped Slot
+			}
+
 			if dropSlot != -1 && dropSlot != g.draggingSlot {
 				pq := arkecs.NewFilter1[ecs.Player](g.world).Query()
 				for pq.Next() {
 					p := pq.Get()
-					if len(p.Inventory) == 9 {
+					for len(p.Inventory) < 9 {
+						p.Inventory = append(p.Inventory, "")
+					}
+					if g.draggingSlot >= 0 && g.draggingSlot < 9 && dropSlot >= 0 && dropSlot < 9 {
 						p.Inventory[g.draggingSlot], p.Inventory[dropSlot] = p.Inventory[dropSlot], p.Inventory[g.draggingSlot]
+					} else if g.draggingSlot >= 0 && g.draggingSlot < 9 && dropSlot == 9 {
+						// Equip weapon from inventory slot
+						itm := p.Inventory[g.draggingSlot]
+						if itm == "weapon" || itm == "axe" || itm == "shotgun" {
+							oldWeapon := p.WeaponType
+							wasEquipped := p.WeaponEquipped
+							p.WeaponEquipped = true
+							p.WeaponType = itm
+							if itm == "weapon" {
+								p.WeaponDurability = 5
+							} else if itm == "axe" {
+								p.WeaponDurability = 12
+							} else if itm == "shotgun" {
+								p.WeaponDurability = 15
+							}
+							if wasEquipped && oldWeapon != "" {
+								p.Inventory[g.draggingSlot] = oldWeapon
+							} else {
+								p.Inventory[g.draggingSlot] = ""
+							}
+						}
+					} else if g.draggingSlot == 9 && dropSlot >= 0 && dropSlot < 9 {
+						// Unequip/move equipped weapon to inventory slot
+						destItem := p.Inventory[dropSlot]
+						if destItem == "weapon" || destItem == "axe" || destItem == "shotgun" {
+							oldWeapon := p.WeaponType
+							p.WeaponType = destItem
+							if destItem == "weapon" {
+								p.WeaponDurability = 5
+							} else if destItem == "axe" {
+								p.WeaponDurability = 12
+							} else if destItem == "shotgun" {
+								p.WeaponDurability = 15
+							}
+							p.Inventory[dropSlot] = oldWeapon
+						} else if destItem == "" {
+							p.Inventory[dropSlot] = p.WeaponType
+							p.WeaponEquipped = false
+							p.WeaponType = ""
+							p.WeaponDurability = 0
+						} else {
+							// Destination slot contains non-weapon; search for first empty slot
+							emptyIdx := -1
+							for k := 0; k < 9; k++ {
+								if p.Inventory[k] == "" {
+									emptyIdx = k
+									break
+								}
+							}
+							if emptyIdx != -1 {
+								p.Inventory[emptyIdx] = p.WeaponType
+								p.WeaponEquipped = false
+								p.WeaponType = ""
+								p.WeaponDurability = 0
+							}
+						}
 					}
 				}
 				pq.Close()
@@ -260,11 +326,12 @@ func WorldToScreen(wx, wy, camX, camY float64) (screenX, screenY float64) {
 // -- Systems --
 
 type UpdateSystem struct {
-	world     *arkecs.World
-	gameMap   *world.Map
-	camera    *Camera
-	dm        *DungeonMaster
-	timeOfDay float64
+	world            *arkecs.World
+	gameMap          *world.Map
+	camera           *Camera
+	dm               *DungeonMaster
+	timeOfDay        float64
+	interactCooldown int
 
 	playerFilter *arkecs.Filter3[ecs.Player, ecs.Position, ecs.Velocity]
 	zombieFilter *arkecs.Filter3[ecs.Zombie, ecs.Position, ecs.Velocity]
@@ -286,6 +353,10 @@ func NewUpdateSystem(w *arkecs.World, m *world.Map) *UpdateSystem {
 }
 
 func (s *UpdateSystem) Update(draggingSlot int) {
+	if s.interactCooldown > 0 {
+		s.interactCooldown--
+	}
+
 	var playerPos world.FloatPoint
 	var hasPlayer bool
 
@@ -361,6 +432,12 @@ func (s *UpdateSystem) processItems() {
 
 func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 	var toRemoveZombies []arkecs.Entity
+	type pendingDrop struct {
+		DropType string
+		X        float64
+		Y        float64
+	}
+	var drops []pendingDrop
 
 	query := s.playerFilter.Query()
 	for query.Next() {
@@ -413,7 +490,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 			// Actually, inpututil is part of ebiten. Let's import it if we can, or just use a small cooldown or check.
 			// Let's just assume one tap removes it.
 			
-			// Let's implement inventory use
+			// Let's implement inventory use (Keys 1-9)
 			useItemIdx := -1
 			if ebiten.IsKeyPressed(ebiten.Key1) { useItemIdx = 0 }
 			if ebiten.IsKeyPressed(ebiten.Key2) { useItemIdx = 1 }
@@ -426,49 +503,123 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 			if ebiten.IsKeyPressed(ebiten.Key9) { useItemIdx = 8 }
 			
 			if useItemIdx >= 0 && useItemIdx < len(player.Inventory) && player.AttackCooldown <= 0 {
-				player.AttackCooldown = 30 // Small cooldown so it doesn't instantly consume everything if held
 				t := player.Inventory[useItemIdx]
-				
-				used := false
 				if t == "food" && player.Hunger < 100 {
+					player.AttackCooldown = 30
 					player.Hunger += 50
 					if player.Hunger > 100 { player.Hunger = 100 }
-					used = true
+					player.Inventory[useItemIdx] = ""
 				} else if t == "antidote" && player.Infected {
+					player.AttackCooldown = 30
 					player.Infected = false
-					used = true
+					player.Inventory[useItemIdx] = ""
 				} else if t == "water" && player.Thirst < 100 {
+					player.AttackCooldown = 30
 					player.Thirst += 50
 					if player.Thirst > 100 { player.Thirst = 100 }
-					used = true
-				} else if t == "weapon" {
+					player.Inventory[useItemIdx] = ""
+				} else if t == "weapon" || t == "axe" || t == "shotgun" {
+					player.AttackCooldown = 15
+					oldWeapon := player.WeaponType
+					wasEquipped := player.WeaponEquipped
 					player.WeaponEquipped = true
-					player.WeaponType = "weapon"
-					player.WeaponDurability = 5
-					used = true
-				} else if t == "axe" {
-					player.WeaponEquipped = true
-					player.WeaponType = "axe"
-					player.WeaponDurability = 12
-					used = true
-				} else if t == "shotgun" {
-					player.WeaponEquipped = true
-					player.WeaponType = "shotgun"
-					player.WeaponDurability = 15
-					used = true
+					player.WeaponType = t
+					if t == "weapon" {
+						player.WeaponDurability = 5
+					} else if t == "axe" {
+						player.WeaponDurability = 12
+					} else if t == "shotgun" {
+						player.WeaponDurability = 15
+					}
+					if wasEquipped && oldWeapon != "" {
+						player.Inventory[useItemIdx] = oldWeapon
+					} else {
+						player.Inventory[useItemIdx] = ""
+					}
 				} else if t == "armor" || t == "vest" {
+					player.AttackCooldown = 30
 					player.ArmorEquipped = true
 					player.ArmorType = "vest"
 					player.ArmorDefense = 0.50
 					player.ArmorDurability = 10
 					player.ArmorMaxDurability = 10
 					player.InfectionResist = 0.70
-					used = true
-				}
-				
-				if used {
-					// Remove item from inventory
 					player.Inventory[useItemIdx] = ""
+				}
+			}
+
+			// Hotkey 'U': Unequip weapon to first empty inventory slot
+			if ebiten.IsKeyPressed(ebiten.KeyU) && player.AttackCooldown <= 0 {
+				if player.WeaponEquipped && player.WeaponType != "" {
+					emptyIdx := -1
+					for idx := 0; idx < len(player.Inventory) && idx < 9; idx++ {
+						if player.Inventory[idx] == "" {
+							emptyIdx = idx
+							break
+						}
+					}
+					if emptyIdx != -1 {
+						player.AttackCooldown = 15
+						player.Inventory[emptyIdx] = player.WeaponType
+						player.WeaponEquipped = false
+						player.WeaponType = ""
+						player.WeaponDurability = 0
+						assets.PlaySound(assets.ShoveSound)
+					}
+				}
+			}
+
+			// Hotkey 'E': Storage Chest Interaction (proximity within 192px / 1.5 tiles)
+			if ebiten.IsKeyPressed(ebiten.KeyE) && s.interactCooldown <= 0 {
+				pTileX := int(pos.X) / world.TileSize
+				pTileY := int(pos.Y) / world.TileSize
+				var nearChest bool
+				var chestTileX, chestTileY int
+				closestChestDist := math.MaxFloat64
+
+				for dy := -2; dy <= 2; dy++ {
+					for dx := -2; dx <= 2; dx++ {
+						tx := pTileX + dx
+						ty := pTileY + dy
+						if tx >= 0 && tx < s.gameMap.Width && ty >= 0 && ty < s.gameMap.Height {
+							if s.gameMap.GetTile(tx, ty) == world.TileChest {
+								chestCenterX := float64(tx)*float64(world.TileSize) + 64.0
+								chestCenterY := float64(ty)*float64(world.TileSize) + 64.0
+								dist := math.Hypot(pos.X-chestCenterX, pos.Y-chestCenterY)
+								if dist <= 192.0 && dist < closestChestDist {
+									closestChestDist = dist
+									nearChest = true
+									chestTileX = tx
+									chestTileY = ty
+								}
+							}
+						}
+					}
+				}
+
+				if nearChest {
+					s.interactCooldown = 20 // 20 frames debounce cooldown
+					
+					// Normalize player inventory to 9 slots
+					for len(player.Inventory) < 9 {
+						player.Inventory = append(player.Inventory, "")
+					}
+					chestInv := s.gameMap.GetChestInventory(chestTileX, chestTileY)
+					for len(chestInv) < 9 {
+						chestInv = append(chestInv, "")
+					}
+
+					// Atomic deep copy swap
+					newPlayerInv := make([]string, 9)
+					copy(newPlayerInv, chestInv[:9])
+
+					newChestInv := make([]string, 9)
+					copy(newChestInv, player.Inventory[:9])
+
+					player.Inventory = newPlayerInv
+					s.gameMap.SetChestInventory(chestTileX, chestTileY, newChestInv)
+
+					assets.PlaySound(assets.ShoveSound)
 				}
 			}
 
@@ -498,7 +649,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 			mx, my := ebiten.CursorPosition()
 			mouseWorldX, mouseWorldY := ScreenToWorld(float64(mx), float64(my), camX, camY)
 
-			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && draggingSlot == -1 && (mx < 1070 || my > 260) {
+			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && draggingSlot == -1 && (mx < 1070 || my > 300) {
 				dx := mouseWorldX - pos.X
 				dy := mouseWorldY - pos.Y
 				dist := math.Hypot(dx, dy)
@@ -597,6 +748,46 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 							}
 						}
 
+						// Shotgun Blast damages destructible barriers (dmg = 2)
+						minTx := int(pos.X-maxShotgunRange-float64(world.TileSize)/2.0) / world.TileSize
+						maxTx := int(pos.X+maxShotgunRange+float64(world.TileSize)/2.0) / world.TileSize
+						minTy := int(pos.Y-maxShotgunRange-float64(world.TileSize)/2.0) / world.TileSize
+						maxTy := int(pos.Y+maxShotgunRange+float64(world.TileSize)/2.0) / world.TileSize
+
+						for ty := minTy; ty <= maxTy; ty++ {
+							for tx := minTx; tx <= maxTx; tx++ {
+								if tx < 0 || tx >= s.gameMap.Width || ty < 0 || ty >= s.gameMap.Height {
+									continue
+								}
+								tileCenterX := float64(tx)*float64(world.TileSize) + float64(world.TileSize)/2.0
+								tileCenterY := float64(ty)*float64(world.TileSize) + float64(world.TileSize)/2.0
+								dx := tileCenterX - pos.X
+								dy := tileCenterY - pos.Y
+								dist := math.Hypot(dx, dy)
+								if dist <= maxShotgunRange+float64(world.TileSize)/2.0 {
+									inCone := false
+									if dist < 96.0+float64(world.TileSize)/2.0 {
+										inCone = true
+									} else if dist > 0.001 {
+										cosAngle := (facingX*dx + facingY*dy) / dist
+										if cosAngle >= cosSpread {
+											inCone = true
+										}
+									}
+									if inCone && s.gameMap.IsDestructible(tx, ty) {
+										destroyed, dropType := s.gameMap.DamageTile(tx, ty, 2)
+										if destroyed && dropType != "" {
+											itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](s.world)
+											itemMap.NewEntity(
+												&ecs.Item{Type: dropType},
+												&ecs.Position{X: tileCenterX, Y: tileCenterY},
+											)
+										}
+									}
+								}
+							}
+						}
+
 						// Acoustic Noise Pulse: Alerts all wandering zombies within 1600.0px
 						noiseQuery := s.zombieFilter.Query()
 						for noiseQuery.Next() {
@@ -627,7 +818,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 						}
 					}
 				} else if player.WeaponEquipped && player.WeaponType == "axe" {
-					// Fire Axe Melee Attack: Cleave reach 128.0px, radius 128.0px
+					// Fire Axe Melee Attack: Cleave reach 128.0px, radius 128.0px (dmg = 2)
 					attackX := pos.X + player.FacingX*128.0
 					attackY := pos.Y + player.FacingY*128.0
 					hitZombies := false
@@ -645,7 +836,38 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 						}
 					}
 
-					if hitZombies {
+					// Chop destructible barriers in reach/radius with dmg = 2
+					hitBarrier := false
+					minTx := int(attackX-128.0-float64(world.TileSize)/2.0) / world.TileSize
+					maxTx := int(attackX+128.0+float64(world.TileSize)/2.0) / world.TileSize
+					minTy := int(attackY-128.0-float64(world.TileSize)/2.0) / world.TileSize
+					maxTy := int(attackY+128.0+float64(world.TileSize)/2.0) / world.TileSize
+
+					for ty := minTy; ty <= maxTy; ty++ {
+						for tx := minTx; tx <= maxTx; tx++ {
+							if tx < 0 || tx >= s.gameMap.Width || ty < 0 || ty >= s.gameMap.Height {
+								continue
+							}
+							tileCenterX := float64(tx)*float64(world.TileSize) + float64(world.TileSize)/2.0
+							tileCenterY := float64(ty)*float64(world.TileSize) + float64(world.TileSize)/2.0
+							dist := math.Hypot(attackX-tileCenterX, attackY-tileCenterY)
+							if dist <= 128.0+float64(world.TileSize)/2.0 {
+								if s.gameMap.IsDestructible(tx, ty) {
+									destroyed, dropType := s.gameMap.DamageTile(tx, ty, 2)
+									hitBarrier = true
+									if destroyed && dropType != "" {
+										itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](s.world)
+										itemMap.NewEntity(
+											&ecs.Item{Type: dropType},
+											&ecs.Position{X: tileCenterX, Y: tileCenterY},
+										)
+									}
+								}
+							}
+						}
+					}
+
+					if hitZombies || hitBarrier {
 						assets.PlaySound(assets.HitSound)
 						player.WeaponDurability--
 						if player.WeaponDurability <= 0 {
@@ -657,7 +879,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 						assets.PlaySound(assets.ShoveSound)
 					}
 				} else if player.WeaponEquipped {
-					// Standard Melee Attack (Bat/Club): Reach 96.0px, radius 96.0px
+					// Standard Melee Attack (Bat/Club): Reach 96.0px, radius 96.0px (dmg = 1)
 					attackX := pos.X + player.FacingX*96.0
 					attackY := pos.Y + player.FacingY*96.0
 					hitZombies := false
@@ -675,7 +897,34 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 						}
 					}
 
-					if hitZombies {
+					// Chop destructible barriers in reach/radius with dmg = 1
+					hitBarrier := false
+					minTx := int(attackX-96.0-float64(world.TileSize)/2.0) / world.TileSize
+					maxTx := int(attackX+96.0+float64(world.TileSize)/2.0) / world.TileSize
+					minTy := int(attackY-96.0-float64(world.TileSize)/2.0) / world.TileSize
+					maxTy := int(attackY+96.0+float64(world.TileSize)/2.0) / world.TileSize
+
+					for ty := minTy; ty <= maxTy; ty++ {
+						for tx := minTx; tx <= maxTx; tx++ {
+							if tx < 0 || tx >= s.gameMap.Width || ty < 0 || ty >= s.gameMap.Height {
+								continue
+							}
+							tileCenterX := float64(tx)*float64(world.TileSize) + float64(world.TileSize)/2.0
+							tileCenterY := float64(ty)*float64(world.TileSize) + float64(world.TileSize)/2.0
+							dist := math.Hypot(attackX-tileCenterX, attackY-tileCenterY)
+							if dist <= 96.0+float64(world.TileSize)/2.0 {
+								if s.gameMap.IsDestructible(tx, ty) {
+									destroyed, dropType := s.gameMap.DamageTile(tx, ty, 1)
+									hitBarrier = true
+									if destroyed && dropType != "" {
+										drops = append(drops, pendingDrop{DropType: dropType, X: tileCenterX, Y: tileCenterY})
+									}
+								}
+							}
+						}
+					}
+
+					if hitZombies || hitBarrier {
 						assets.PlaySound(assets.HitSound)
 						player.WeaponDurability--
 						if player.WeaponDurability <= 0 {
@@ -716,6 +965,16 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 			}
 		}
 		s.world.RemoveEntity(ent)
+	}
+
+	if len(drops) > 0 {
+		itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](s.world)
+		for _, drop := range drops {
+			itemMap.NewEntity(
+				&ecs.Item{Type: drop.DropType},
+				&ecs.Position{X: drop.X, Y: drop.Y},
+			)
+		}
 	}
 }
 
@@ -955,7 +1214,7 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 
 	visionRadius := 2200.0
 
-	// 2. Draw Ground Tiles (Rectangular 2D orthogonal, seamless, zero gaps)
+	// 2. Draw Ground Tiles (Rectangular 2D orthogonal with Autotiling & Terrain Blending)
 	for y := 0; y < s.gameMap.Height; y++ {
 		for x := 0; x < s.gameMap.Width; x++ {
 			t := s.gameMap.GetTile(x, y)
@@ -977,10 +1236,11 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 				continue
 			}
 
+			// Determine base ground type
+			gt := world.GroundType(t)
 			var img *ebiten.Image
-			switch t {
-			case world.TileGrass, world.TileTree, world.TileFence, world.TileTent, world.TileElevationBlock, world.TileRamp, world.TileStump, world.TileMushroom, world.TileSign,
-				world.TileBench, world.TileChest, world.TileSculpture, world.TileBush, world.TileFlower, world.TileStone:
+			switch gt {
+			case world.TileGrass:
 				img = assets.GrassImage
 			case world.TileDirt:
 				img = assets.DirtImage
@@ -988,36 +1248,94 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 				img = assets.WoodImage
 			case world.TileAsphalt:
 				img = assets.AsphaltImage
-			case world.TileConcrete, world.TileDebris:
+			case world.TileConcrete:
 				img = assets.ConcreteImage
 			case world.TileTileFloor:
 				img = assets.TileFloorImage
 			}
 
-			if img == nil {
-				continue
+			if img != nil {
+				bounds := img.Bounds()
+				imgW := float64(bounds.Dx())
+				imgH := float64(bounds.Dy())
+				if imgW > 0 && imgH > 0 {
+					scaleX := (float64(world.TileSize) / imgW) * DefaultZoom
+					scaleY := (float64(world.TileSize) / imgH) * DefaultZoom
+					screenX, screenY := WorldToScreen(worldX, worldY, camX, camY)
+
+					op := &ebiten.DrawImageOptions{}
+					op.GeoM.Scale(scaleX, scaleY)
+					op.GeoM.Translate(screenX, screenY)
+
+					if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
+						op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
+					}
+
+					screen.DrawImage(img, op)
+				}
 			}
 
-			bounds := img.Bounds()
-			imgW := float64(bounds.Dx())
-			imgH := float64(bounds.Dy())
-			if imgW <= 0 || imgH <= 0 {
-				continue
+			// Render Autotiling Terrain Transition Overlays
+			transitions := world.GetTileTransitions(s.gameMap, x, y)
+			for _, tr := range transitions {
+				overlayImg := assets.GetTerrainOverlay(tr.TerrainType, tr.Quad, tr.State, tr.IsDiagonal)
+				if overlayImg == nil {
+					continue
+				}
+				obounds := overlayImg.Bounds()
+				ow := float64(obounds.Dx())
+				oh := float64(obounds.Dy())
+				if ow <= 0 || oh <= 0 {
+					continue
+				}
+
+				// Quadrant offsets (each quadrant is 64x64 in 128x128 tile)
+				var qOffX, qOffY float64
+				switch tr.Quad {
+				case world.QuadNW:
+					qOffX, qOffY = 0, 0
+				case world.QuadNE:
+					qOffX, qOffY = 64.0, 0
+				case world.QuadSW:
+					qOffX, qOffY = 0, 64.0
+				case world.QuadSE:
+					qOffX, qOffY = 64.0, 64.0
+				}
+
+				quadWorldX := worldX + qOffX
+				quadWorldY := worldY + qOffY
+				screenQX, screenQY := WorldToScreen(quadWorldX, quadWorldY, camX, camY)
+
+				scaleQX := (64.0 / ow) * DefaultZoom
+				scaleQY := (64.0 / oh) * DefaultZoom
+
+				opQ := &ebiten.DrawImageOptions{}
+				opQ.GeoM.Scale(scaleQX, scaleQY)
+				opQ.GeoM.Translate(screenQX, screenQY)
+
+				if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
+					opQ.ColorScale.Scale(0.2, 0.2, 0.3, 1)
+				}
+
+				screen.DrawImage(overlayImg, opQ)
 			}
 
-			scaleX := (float64(world.TileSize) / imgW) * DefaultZoom
-			scaleY := (float64(world.TileSize) / imgH) * DefaultZoom
-			screenX, screenY := WorldToScreen(worldX, worldY, camX, camY)
-
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Scale(scaleX, scaleY)
-			op.GeoM.Translate(screenX, screenY)
-
-			if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
-				op.ColorScale.Scale(0.2, 0.2, 0.3, 1) // Memory tint
+			// Wall south-facing facade drop shadow on floor below wall
+			if y > 0 && s.gameMap.GetTile(x, y-1) == world.TileWall && assets.WallFacadeShadowImage != nil {
+				screenX, screenY := WorldToScreen(worldX, worldY, camX, camY)
+				sbounds := assets.WallFacadeShadowImage.Bounds()
+				sw := float64(sbounds.Dx())
+				sh := float64(sbounds.Dy())
+				if sw > 0 && sh > 0 {
+					opShadow := &ebiten.DrawImageOptions{}
+					opShadow.GeoM.Scale((float64(world.TileSize)/sw)*DefaultZoom, (32.0/sh)*DefaultZoom)
+					opShadow.GeoM.Translate(screenX, screenY)
+					if !s.gameMap.Visible[idx] && s.gameMap.Explored[idx] {
+						opShadow.ColorScale.Scale(0.2, 0.2, 0.3, 1)
+					}
+					screen.DrawImage(assets.WallFacadeShadowImage, opShadow)
+				}
 			}
-
-			screen.DrawImage(img, op)
 		}
 	}
 
@@ -1052,11 +1370,13 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 				var img *ebiten.Image
 				switch t {
 				case world.TileWall:
-					img = assets.WallImage
+					wMask := world.GetWallBitmask(s.gameMap, x, y)
+					img = assets.GetWallAutotileImage(wMask)
+				case world.TileFence:
+					fMask := world.GetFenceBitmask(s.gameMap, x, y)
+					img = assets.GetFenceAutotileImage(fMask)
 				case world.TileTree:
 					img = assets.TreeImage
-				case world.TileFence:
-					img = assets.FenceImage
 				case world.TileDebris:
 					img = assets.DebrisImage
 				case world.TileTent:
@@ -1154,6 +1474,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 			img = assets.ArmorImage
 		case "antidote":
 			img = assets.AntidoteImage
+		case "wood":
+			img = assets.WoodImage
 		}
 
 		if img == nil {
@@ -1408,10 +1730,63 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot 
 			ebitenutil.DebugPrintAt(screen, text, 1075, y+2)
 		}
 	}
-	if draggingSlot != -1 && draggingSlot < len(playerInventory) && playerInventory[draggingSlot] != "" {
+
+	// Dedicated Equipped UI Slot (Coordinates: 1070, 265, 200, 30)
+	equippedBg := color.RGBA{40, 60, 90, 220}
+	if draggingSlot == 9 {
+		equippedBg = color.RGBA{80, 110, 160, 220}
+	}
+	vector.DrawFilledRect(screen, 1070, 265, 200, 30, equippedBg, false)
+
+	equippedText := "Equipped: [Empty]"
+	if hasWeapon && playerDurability > 0 && playerWeaponType != "" {
+		wName := strings.ToUpper(playerWeaponType)
+		equippedText = fmt.Sprintf("Equipped: %s (%d hits)", wName, playerDurability)
+	}
+	if draggingSlot != 9 {
+		ebitenutil.DebugPrintAt(screen, equippedText, 1075, 272)
+	}
+
+	// Tooltip when dragging
+	if draggingSlot != -1 {
 		cx, cy := ebiten.CursorPosition()
-		text := fmt.Sprintf("%s", playerInventory[draggingSlot])
-		ebitenutil.DebugPrintAt(screen, text, cx, cy)
+		if draggingSlot >= 0 && draggingSlot < len(playerInventory) && playerInventory[draggingSlot] != "" {
+			text := fmt.Sprintf("%s", playerInventory[draggingSlot])
+			ebitenutil.DebugPrintAt(screen, text, cx, cy)
+		} else if draggingSlot == 9 && hasWeapon && playerWeaponType != "" {
+			text := fmt.Sprintf("%s", strings.ToUpper(playerWeaponType))
+			ebitenutil.DebugPrintAt(screen, text, cx, cy)
+		}
+	}
+
+	// Chest Interaction HUD Prompt
+	nearChest := false
+	pTileX := int(playerX) / world.TileSize
+	pTileY := int(playerY) / world.TileSize
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			tx := pTileX + dx
+			ty := pTileY + dy
+			if tx >= 0 && tx < s.gameMap.Width && ty >= 0 && ty < s.gameMap.Height {
+				if s.gameMap.GetTile(tx, ty) == world.TileChest {
+					chestCenterX := float64(tx)*float64(world.TileSize) + 64.0
+					chestCenterY := float64(ty)*float64(world.TileSize) + 64.0
+					dist := math.Hypot(playerX-chestCenterX, playerY-chestCenterY)
+					if dist <= 192.0 {
+						nearChest = true
+						break
+					}
+				}
+			}
+		}
+		if nearChest {
+			break
+		}
+	}
+
+	if nearChest && !playerDead {
+		vector.DrawFilledRect(screen, 490, 645, 300, 25, color.RGBA{20, 20, 20, 200}, false)
+		ebitenutil.DebugPrintAt(screen, "[E] Swap Inventory with Chest", 520, 650)
 	}
 
 	// Infected Status (Repositioned to Y: 115)

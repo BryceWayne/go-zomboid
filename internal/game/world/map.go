@@ -188,19 +188,23 @@ type Map struct {
 	Buildings    []Building
 	LootSpawns   []LootSpawn
 	ZombieSpawns []FloatPoint
+	Chests         map[Point][]string
+	TileDurability map[Point]int
 }
 
 // NewMap constructs a procedurally generated town map with zoned districts, roads, multi-room buildings, and contextual spawns.
 func NewMap(width, height int) *Map {
 	m := &Map{
-		Width:        width,
-		Height:       height,
-		Tiles:        make([]TileType, width*height),
-		Visible:      make([]bool, width*height),
-		Explored:     make([]bool, width*height),
-		Buildings:    make([]Building, 0),
-		LootSpawns:   make([]LootSpawn, 0),
-		ZombieSpawns: make([]FloatPoint, 0),
+		Width:          width,
+		Height:         height,
+		Tiles:          make([]TileType, width*height),
+		Visible:        make([]bool, width*height),
+		Explored:       make([]bool, width*height),
+		Buildings:      make([]Building, 0),
+		LootSpawns:     make([]LootSpawn, 0),
+		ZombieSpawns:   make([]FloatPoint, 0),
+		Chests:         make(map[Point][]string),
+		TileDurability: make(map[Point]int),
 	}
 
 	// 1. Fill base terrain with grass, surrounded by boundary perimeter walls
@@ -806,17 +810,24 @@ func (m *Map) placeEnvironmentalProps(width, height, midX, midY int) {
 	}
 
 	// Procedural Storage Chests in Houses, Campsite, and Warehouse
-	chests := []Point{
-		{midX + 22, midY + 8}, // Warehouse corner
-		{width - 10, 9},        // Campsite
-		{11, 9},               // House 1 bedroom corner
-		{11, midY + 7},        // Police armory corner
+	chestConfigs := []struct {
+		pos  Point
+		loot []string
+	}{
+		{Point{midX + 22, midY + 8}, []string{"axe", "ammo", "ammo", "food", "", "", "", "", ""}}, // Warehouse corner
+		{Point{width - 10, 9}, []string{"food", "water", "weapon", "antidote", "", "", "", "", ""}}, // Campsite
+		{Point{11, 9}, []string{"armor", "water", "food", "", "", "", "", "", ""}},                  // House 1 bedroom corner
+		{Point{11, midY + 7}, []string{"shotgun", "ammo", "ammo", "armor", "", "", "", "", ""}},    // Police armory corner
 	}
-	for _, p := range chests {
+	for _, cfg := range chestConfigs {
+		p := cfg.pos
 		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
 			cur := m.GetTile(p.X, p.Y)
-			if cur == TileGrass || cur == TileConcrete || cur == TileWoodFloor {
+			if cur.IsFloor() {
 				m.SetTile(p.X, p.Y, TileChest)
+				lootCopy := make([]string, 9)
+				copy(lootCopy, cfg.loot)
+				m.Chests[p] = lootCopy
 			}
 		}
 	}
@@ -1102,3 +1113,115 @@ func (m *Map) IsColliding(rectX, rectY, rectW, rectH float64) bool {
 	}
 	return false
 }
+
+// GetChestInventory returns a 9-slot slice representing the inventory stored in the chest at (tx, ty).
+// If no chest inventory exists at this location, an empty 9-slot inventory is initialized and returned.
+func (m *Map) GetChestInventory(tx, ty int) []string {
+	if m.Chests == nil {
+		m.Chests = make(map[Point][]string)
+	}
+	p := Point{X: tx, Y: ty}
+	inv, exists := m.Chests[p]
+	if !exists || inv == nil {
+		inv = make([]string, 9)
+		m.Chests[p] = inv
+		return inv
+	}
+	for len(inv) < 9 {
+		inv = append(inv, "")
+	}
+	if len(inv) > 9 {
+		inv = inv[:9]
+	}
+	m.Chests[p] = inv
+	return inv
+}
+
+// SetChestInventory sets the inventory of the chest at (tx, ty) with a defensive deep copy of 9 elements.
+func (m *Map) SetChestInventory(tx, ty int, inv []string) {
+	if m.Chests == nil {
+		m.Chests = make(map[Point][]string)
+	}
+	p := Point{X: tx, Y: ty}
+	chestInv := make([]string, 9)
+	for i := 0; i < 9 && i < len(inv); i++ {
+		chestInv[i] = inv[i]
+	}
+	m.Chests[p] = chestInv
+}
+
+// IsDestructible returns true if the tile at (x, y) can be damaged and destroyed by weapons.
+// Perimeter boundary walls and invalid map coordinates are indestructible.
+func (m *Map) IsDestructible(x, y int) bool {
+	if x <= 0 || x >= m.Width-1 || y <= 0 || y >= m.Height-1 {
+		return false // Perimeter boundary walls are indestructible
+	}
+	t := m.GetTile(x, y)
+	switch t {
+	case TileFence, TileTree, TileStump, TileBench:
+		return true
+	case TileWall:
+		return true // Interior destructible building walls
+	default:
+		return false
+	}
+}
+
+// GetTileMaxDurability returns the maximum durability hits for a destructible tile.
+func (m *Map) GetTileMaxDurability(t TileType) int {
+	switch t {
+	case TileFence:
+		return 2
+	case TileTree:
+		return 3
+	case TileStump, TileBench:
+		return 2
+	case TileWall:
+		return 3
+	default:
+		return 0
+	}
+}
+
+// GetTileDurability returns the remaining durability/health of the tile at (x, y).
+func (m *Map) GetTileDurability(x, y int) int {
+	if !m.IsDestructible(x, y) {
+		return 0
+	}
+	if m.TileDurability == nil {
+		m.TileDurability = make(map[Point]int)
+	}
+	p := Point{X: x, Y: y}
+	if cur, exists := m.TileDurability[p]; exists {
+		return cur
+	}
+	return m.GetTileMaxDurability(m.GetTile(x, y))
+}
+
+// DamageTile reduces tile durability by amount. Returns true if destroyed along with dropped resource type ("wood").
+// Destroyed tiles are replaced with walkable ground, clearing solidity and vision blocking immediately.
+func (m *Map) DamageTile(x, y int, amount int) (destroyed bool, dropType string) {
+	if !m.IsDestructible(x, y) || amount <= 0 {
+		return false, ""
+	}
+	if m.TileDurability == nil {
+		m.TileDurability = make(map[Point]int)
+	}
+	p := Point{X: x, Y: y}
+	cur := m.GetTileDurability(x, y)
+	cur -= amount
+	if cur <= 0 {
+		delete(m.TileDurability, p)
+		t := m.GetTile(x, y)
+		if t == TileWall {
+			m.SetTile(x, y, TileWoodFloor)
+		} else {
+			m.SetTile(x, y, TileGrass)
+		}
+		return true, "wood"
+	}
+	m.TileDurability[p] = cur
+	return false, ""
+}
+
+

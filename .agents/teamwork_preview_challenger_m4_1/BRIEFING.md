@@ -1,47 +1,51 @@
-# BRIEFING — 2026-08-28T17:45:35Z
+# BRIEFING — 2026-08-29T17:12:00Z
 
 ## Mission
-Empirically challenge and stress-test Milestone 4 weapon & combat mechanics (Axe cleave, shotgun spread cone boundaries, ammo consumption, 400px noise horde aggro, dry fire fallback), run tests, and provide verdict.
+Adversarially challenge and stress-test Requirement R4 (Environmental Destruction & Resource Drops) implementation by Worker 3.
 
 ## 🔒 My Identity
-- Archetype: challenger
+- Archetype: empirical-challenger
 - Roles: critic, specialist
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1
-- Original parent: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Milestone: Milestone 4
+- Original parent: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Milestone: Milestone 4 (R4 Environmental Destruction & Resource Drops)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
-- Review-only — do NOT modify implementation code (tests may be added/executed to stress test)
-- Must execute tests directly with CC=gcc go test -v ./...
-- Never trust claims without empirical verification
+- Must run verification code ourselves. Do NOT trust worker claims or logs.
+- Write adversarial tests in `internal/game/world/destruction_adversarial_test.go`
+- Check concurrent destruction, rapid attacks, broken weapons, solidity/FOV updates, perimeter indestructibility.
+- Run `C_INCLUDE_PATH=/usr/include CGO_CFLAGS="-I/usr/include" CC=gcc go test -v ./...`.
 
 ## Current Parent
-- Conversation ID: efb9db38-c509-4c3c-ad0a-53ad2f86b201
-- Updated: 2026-08-28T17:43:47Z
+- Conversation ID: 8fd0f6a8-cb46-4ae5-8024-c99358e741e1
+- Updated: 2026-08-29T17:12:00Z
 
 ## Review Scope
-- **Files to review**: `internal/game/game.go`, `internal/game/combat_test.go`, `internal/game/combat_empirical_stress_test.go`, `internal/ecs/components.go`
-- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md
-- **Review criteria**: Axe cleave multi-kill, Shotgun spread cone geometric boundaries (±22.5 deg, 160px reach), exact ammo consumption (1 item per blast), exact 400px noise horde aggro (`z.Chasing = true`), dry fire fallback when ammo count is 0.
-
-## Key Decisions Made
-- Authored empirical stress test harness `internal/game/combat_empirical_stress_test.go` with 8 cardinal directions Monte Carlo simulation (40,000 samples), angular boundary sweeps, 50-zombie axe cleave cluster tests, exact ammo consumption sequences, radial horde aggro boundary sweeps, and dry-fire fallback verifications.
-- Verified 100% test pass rate across all packages with `CC=gcc go test -v -count=1 ./...`.
-
-## Artifact Index
-- /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/handoff.md — Final handoff report
-- /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/progress.md — Progress log
+- **Files to review**: `internal/game/world/map.go`, `internal/game/world/destruction_test.go`, `internal/game/world/destruction_adversarial_test.go`, `internal/game/game.go`, `internal/game/destruction_combat_test.go`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, Worker 3 handoff
+- **Review criteria**: Concurrency safety, perimeter boundary immutability, durability degradation math, FOV raycasting and collision clearing, weapon wear and breaking lifecycles, drop generation.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - H1: Axe cleave kills all zombies within 32px attack circle in a single swing while consuming only 1 durability -> CONFIRMED & PASS
-  - H2: Shotgun spread cone adheres strictly to $\pm 22.5^\circ$ half-angle and 160px maximum reach with omnidirectional point-blank (<24px) coverage -> CONFIRMED & PASS
-  - H3: Shotgun blast consumes exactly 1 ammo item per shot from mixed inventories -> CONFIRMED & PASS
-  - H4: Shotgun acoustic pulse aggros wandering zombies strictly within $\le 400.0\text{px}$ -> CONFIRMED & PASS
-  - H5: Shotgun dry-fire with 0 ammo triggers defensive stun/knockback shove without consuming ammo or durability and without noise pulse -> CONFIRMED & PASS
-- **Vulnerabilities found**: None. Floating-point precision on strict boundaries is handled reliably in game logic.
-- **Untested angles**: None.
+  1. Boundary perimeter walls can be breached by extreme damage or rapid consecutive attacks -> Disproved: strict boundary checks enforce indestructibility.
+  2. Non-destructible tiles (e.g. Chests, Debris, Concrete) can be accidentally damaged -> Disproved: tile type whitelist rigorously verified.
+  3. High-concurrency barrier destruction causes state corruption or memory leaks in `TileDurability` -> Disproved: 16-goroutine stress test passed cleanly, race detector clean.
+  4. Destroying barriers leaves stale collision or FOV occlusion data -> Disproved: dynamic floor/grass replacement clears collision and unblocks LOS immediately.
+  5. Breaking weapons on barriers causes crashes or negative durability -> Disproved: durability decrements and transitions to fists smoothly.
+- **Vulnerabilities found**: None.
+- **Untested angles**: None within R4 scope.
 
 ## Loaded Skills
 - None specified
+
+## Key Decisions Made
+- Adversarial test harness authored in `internal/game/world/destruction_adversarial_test.go` covering 9 comprehensive stress suites.
+- Verdict: APPROVE.
+
+## Artifact Index
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/DISPATCH.md` — Dispatch log
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/BRIEFING.md` — Working memory
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/progress.md` — Progress tracker
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m4_1/handoff.md` — Final handoff report
+- `/home/bryce/code/go-zomboid/internal/game/world/destruction_adversarial_test.go` — Adversarial test suite
