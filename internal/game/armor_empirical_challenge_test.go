@@ -151,7 +151,7 @@ func TestEmpirical_ExactHealthDrainMitigation_50Percent(t *testing.T) {
 	player.ArmorEquipped = true
 	player.ArmorDefense = 0.50
 
-	sys.processInputAndCombat()
+	sys.processInputAndCombat(-1)
 
 	expectedSingleTickHealth := 100.0 - 0.025
 	if math.Abs(player.Health-expectedSingleTickHealth) > 1e-9 {
@@ -188,8 +188,8 @@ func TestEmpirical_ExactHealthDrainMitigation_50Percent(t *testing.T) {
 		armoredPlayer.Hunger = 100.0
 		armoredPlayer.Thirst = 100.0
 
-		sysUnarmored.processInputAndCombat()
-		sysArmored.processInputAndCombat()
+		sysUnarmored.processInputAndCombat(-1)
+		sysArmored.processInputAndCombat(-1)
 
 		expectedUnarmoredHealth := 100.0 - (float64(tick) * 0.05)
 		expectedArmoredHealth := 100.0 - (float64(tick) * 0.025)

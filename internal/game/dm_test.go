@@ -415,7 +415,7 @@ func TestDungeonMaster_GameLoopIntegration(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		err := g.Update()
 		if err != nil {
-			t.Fatalf("Game.Update() returned error: %v", err)
+			t.Fatalf("Game.Update(-1) returned error: %v", err)
 		}
 	}
 

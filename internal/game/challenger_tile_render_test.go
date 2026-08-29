@@ -81,21 +81,21 @@ func TestChallenger_All16ObstaclesPropsAnd6FloorsRenderNoPanic(t *testing.T) {
 			m.Visible[i] = true
 			m.Explored[i] = true
 		}
-		drawSys.Draw(screen, tod)
+		drawSys.Draw(screen, tod, -1)
 
 		// Test explored but not currently visible (fog of war / memory tint)
 		for i := range m.Visible {
 			m.Visible[i] = false
 			m.Explored[i] = true
 		}
-		drawSys.Draw(screen, tod)
+		drawSys.Draw(screen, tod, -1)
 
 		// Test unexplored & not visible
 		for i := range m.Visible {
 			m.Visible[i] = false
 			m.Explored[i] = false
 		}
-		drawSys.Draw(screen, tod)
+		drawSys.Draw(screen, tod, -1)
 	}
 }
 

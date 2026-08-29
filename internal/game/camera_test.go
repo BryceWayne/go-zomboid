@@ -198,7 +198,7 @@ func TestCamera_FOVExpandedRadius(t *testing.T) {
 		&ecs.Collider{Width: 64, Height: 64},
 	)
 
-	sys.Update()
+	sys.Update(-1)
 
 	// Clear out any walls on horizontal test line to check raycast distance
 	for tx := 30; tx <= 50; tx++ {
@@ -206,7 +206,7 @@ func TestCamera_FOVExpandedRadius(t *testing.T) {
 	}
 
 	// Re-run update to cast unobstructed rays
-	sys.Update()
+	sys.Update(-1)
 
 	// With 22 tiles FOV radius, tile at distance 20 (tx = 50, ty = 30) must be visible and explored
 	idx := 30*m.Width + 50

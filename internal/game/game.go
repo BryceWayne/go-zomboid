@@ -25,6 +25,7 @@ type Game struct {
 	updateSys *UpdateSystem
 	drawSys   *DrawSystem
 	timeOfDay float64
+	draggingSlot int
 }
 
 func NewGame() *Game {
@@ -36,6 +37,7 @@ func NewGame() *Game {
 
 func (g *Game) Reset() {
 	g.timeOfDay = 8.0 // Morning!
+	g.draggingSlot = -1
 
 	w := arkecs.NewWorld()
 	gameMap := world.NewMap(100, 100)
@@ -57,7 +59,7 @@ func (g *Game) Reset() {
 			Health:    100.0,
 			Hunger:    100.0,
 			Thirst:    100.0,
-			Inventory: []string{},
+			Inventory: make([]string, 9),
 			FacingX:   1, 
 			FacingY:   0,
 		},
@@ -146,14 +148,49 @@ func (g *Game) Update() error {
 		}
 	}
 
+	cx, cy := ebiten.CursorPosition()
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		if g.draggingSlot == -1 {
+			for i := 0; i < 9; i++ {
+				slotY := 30 + i*25
+				if cx >= 1070 && cx <= 1270 && cy >= slotY && cy <= slotY+20 {
+					g.draggingSlot = i
+					break
+				}
+			}
+		}
+	} else {
+		if g.draggingSlot != -1 {
+			dropSlot := -1
+			for i := 0; i < 9; i++ {
+				slotY := 30 + i*25
+				if cx >= 1070 && cx <= 1270 && cy >= slotY && cy <= slotY+20 {
+					dropSlot = i
+					break
+				}
+			}
+			if dropSlot != -1 && dropSlot != g.draggingSlot {
+				pq := arkecs.NewFilter1[ecs.Player](g.world).Query()
+				for pq.Next() {
+					p := pq.Get()
+					if len(p.Inventory) == 9 {
+						p.Inventory[g.draggingSlot], p.Inventory[dropSlot] = p.Inventory[dropSlot], p.Inventory[g.draggingSlot]
+					}
+				}
+				pq.Close()
+			}
+			g.draggingSlot = -1
+		}
+	}
+
 	g.updateSys.timeOfDay = g.timeOfDay
-	g.updateSys.Update()
+	g.updateSys.Update(g.draggingSlot)
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 15, G: 15, B: 15, A: 255})
-	g.drawSys.Draw(screen, g.timeOfDay)
+	g.drawSys.Draw(screen, g.timeOfDay, g.draggingSlot)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -248,7 +285,7 @@ func NewUpdateSystem(w *arkecs.World, m *world.Map) *UpdateSystem {
 	}
 }
 
-func (s *UpdateSystem) Update() {
+func (s *UpdateSystem) Update(draggingSlot int) {
 	var playerPos world.FloatPoint
 	var hasPlayer bool
 
@@ -269,7 +306,7 @@ func (s *UpdateSystem) Update() {
 	}
 
 	s.processItems()
-	s.processInputAndCombat()
+	s.processInputAndCombat(draggingSlot)
 	s.processZombies()
 	s.processMovement()
 }
@@ -281,11 +318,12 @@ func (s *UpdateSystem) processItems() {
 	
 	pq := s.playerFilter.Query()
 	for pq.Next() {
+		pEnt = pq.Entity()
 		_, pPos, _ := pq.Get()
 		pX, pY = pPos.X, pPos.Y
-		pEnt = pq.Entity()
 		found = true
 	}
+
 	if !found {
 		return
 	}
@@ -296,18 +334,22 @@ func (s *UpdateSystem) processItems() {
 		return
 	}
 
+	iq := s.itemFilter.Query()
 	var toRemove []arkecs.Entity
-	qItem := s.itemFilter.Query()
-	for qItem.Next() {
-		item, iPos := qItem.Get()
-		ent := qItem.Entity()
+	
+	for iq.Next() {
+		item, iPos := iq.Get()
+		ent := iq.Entity()
 		
 		dx := pX - iPos.X
 		dy := pY - iPos.Y
 		if math.Sqrt(dx*dx + dy*dy) < 64.0 {
-			if len(player.Inventory) < 9 {
-				player.Inventory = append(player.Inventory, item.Type)
-				toRemove = append(toRemove, ent)
+			for i := 0; i < len(player.Inventory); i++ {
+				if player.Inventory[i] == "" {
+					player.Inventory[i] = item.Type
+					toRemove = append(toRemove, ent)
+					break
+				}
 			}
 		}
 	}
@@ -317,7 +359,7 @@ func (s *UpdateSystem) processItems() {
 	}
 }
 
-func (s *UpdateSystem) processInputAndCombat() {
+func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 	var toRemoveZombies []arkecs.Entity
 
 	query := s.playerFilter.Query()
@@ -426,7 +468,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 				
 				if used {
 					// Remove item from inventory
-					player.Inventory = append(player.Inventory[:useItemIdx], player.Inventory[useItemIdx+1:]...)
+					player.Inventory[useItemIdx] = ""
 				}
 			}
 
@@ -456,7 +498,7 @@ func (s *UpdateSystem) processInputAndCombat() {
 			mx, my := ebiten.CursorPosition()
 			mouseWorldX, mouseWorldY := ScreenToWorld(float64(mx), float64(my), camX, camY)
 
-			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && draggingSlot == -1 && (mx < 1070 || my > 260) {
 				dx := mouseWorldX - pos.X
 				dy := mouseWorldY - pos.Y
 				dist := math.Hypot(dx, dy)
@@ -505,8 +547,8 @@ func (s *UpdateSystem) processInputAndCombat() {
 					}
 
 					if ammoIdx >= 0 {
-						// Consume 1 ammo item
-						player.Inventory = append(player.Inventory[:ammoIdx], player.Inventory[ammoIdx+1:]...)
+						// Consume ammo
+						player.Inventory[ammoIdx] = ""
 
 						// Deduct shotgun durability
 						player.WeaponDurability--
@@ -864,7 +906,7 @@ func IsoToWorld(isoX, isoY float64) (wx, wy float64) {
 	return isoX, isoY
 }
 
-func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
+func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64, draggingSlot int) {
 	var camX, camY float64
 	var playerX, playerY float64
 	var playerDead, playerInfected bool
@@ -1348,17 +1390,28 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 	}
 
 	// Inventory UI
-	ebitenutil.DebugPrintAt(screen, "Inventory (Press 1-9 to use):", 550, 10)
+	ebitenutil.DebugPrintAt(screen, "Inventory (Press 1-9 to use):", 1070, 10)
 	for i := 0; i < 9; i++ {
 		// Draw slot background
 		y := 30 + (i * 25)
-		vector.DrawFilledRect(screen, 550, float32(y), 200, 20, color.RGBA{50, 50, 50, 200}, false)
+		colorBg := color.RGBA{50, 50, 50, 200}
+		if i == draggingSlot {
+			colorBg = color.RGBA{100, 100, 100, 200}
+		}
+		vector.DrawFilledRect(screen, 1070, float32(y), 200, 20, colorBg, false)
 
 		text := fmt.Sprintf("%d: [Empty]", i+1)
-		if i < len(playerInventory) {
+		if i < len(playerInventory) && playerInventory[i] != "" {
 			text = fmt.Sprintf("%d: %s", i+1, playerInventory[i])
 		}
-		ebitenutil.DebugPrintAt(screen, text, 555, y+2)
+		if i != draggingSlot {
+			ebitenutil.DebugPrintAt(screen, text, 1075, y+2)
+		}
+	}
+	if draggingSlot != -1 && draggingSlot < len(playerInventory) && playerInventory[draggingSlot] != "" {
+		cx, cy := ebiten.CursorPosition()
+		text := fmt.Sprintf("%s", playerInventory[draggingSlot])
+		ebitenutil.DebugPrintAt(screen, text, cx, cy)
 	}
 
 	// Infected Status (Repositioned to Y: 115)

@@ -107,8 +107,10 @@ func TestGameResetStress(t *testing.T) {
 			if p.Infected {
 				t.Errorf("Iter %d: Expected player Infected to be false", i)
 			}
-			if len(p.Inventory) != 0 {
-				t.Errorf("Iter %d: Expected empty inventory, got len %d: %v", i, len(p.Inventory), p.Inventory)
+			for idx, item := range p.Inventory {
+				if item != "" {
+					t.Errorf("Iter %d: Expected empty inventory slot %d, got %v", i, idx, item)
+				}
 			}
 			if pos.X != g.gameMap.PlayerSpawn.X || pos.Y != g.gameMap.PlayerSpawn.Y {
 				t.Errorf("Iter %d: Expected player at (%f, %f), got (%f, %f)",
@@ -366,7 +368,7 @@ func TestIsometricRenderingAllTileTypesAndPropsStress(t *testing.T) {
 				}
 			}()
 			screen.Clear()
-			drawSys.Draw(screen, hour)
+			drawSys.Draw(screen, hour, -1)
 		})
 	}
 
@@ -382,7 +384,7 @@ func TestIsometricRenderingAllTileTypesAndPropsStress(t *testing.T) {
 			}
 		}()
 		screen.Clear()
-		drawSys.Draw(screen, 12.0)
+		drawSys.Draw(screen, 12.0, -1)
 	})
 
 	// Test with Dead Player state
@@ -398,11 +400,11 @@ func TestIsometricRenderingAllTileTypesAndPropsStress(t *testing.T) {
 			}
 		}()
 		screen.Clear()
-		drawSys.Draw(screen, 12.0)
+		drawSys.Draw(screen, 12.0, -1)
 	})
 }
 
-// TestGameLoopContinuousSimulationStress runs game.Update() and game.Draw() across 2500 consecutive frames,
+// TestGameLoopContinuousSimulationStress runs game.Update(-1) and game.Draw() across 2500 consecutive frames,
 // verifying continuous headless simulation without panics, memory/entity leaks, or NaN velocities.
 func TestGameLoopContinuousSimulationStress(t *testing.T) {
 	assets.Load()

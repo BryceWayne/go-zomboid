@@ -94,7 +94,7 @@ func TestEmpirical_FOVInGameUpdate(t *testing.T) {
 	}
 
 	// Update game system once
-	g.updateSys.Update()
+	g.updateSys.Update(-1)
 
 	px := int(pPos.X) / world.TileSize
 	py := int(pPos.Y) / world.TileSize

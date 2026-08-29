@@ -427,7 +427,7 @@ func TestArmorEmpirical_HUDAndVisualTintExhaustive(t *testing.T) {
 			}()
 
 			screen.Clear()
-			drawSys.Draw(screen, 12.0)
+			drawSys.Draw(screen, 12.0, -1)
 		})
 	}
 }

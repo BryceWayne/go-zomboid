@@ -101,7 +101,7 @@ func TestAdversarial_WorldResetWhileInCombat(t *testing.T) {
 
 		// Run 5 combat update frames
 		for frame := 0; frame < 5; frame++ {
-			g.updateSys.Update()
+			g.updateSys.Update(-1)
 		}
 
 		// Rapid State Transition: Call Reset() mid-combat
@@ -131,7 +131,7 @@ func TestAdversarial_WorldResetWhileInCombat(t *testing.T) {
 			if freshP.ArmorEquipped || freshP.WeaponEquipped {
 				t.Errorf("Iter %d: Player has dirty equipment state: Armor=%v, Weapon=%v", iteration, freshP.ArmorEquipped, freshP.WeaponEquipped)
 			}
-			if len(freshP.Inventory) != 0 {
+			for _, it := range freshP.Inventory { if it != "" { t.Errorf("Iter %d: Expected empty inventory, got %s", iteration, it); break } }; if false  {
 				t.Errorf("Iter %d: Expected empty inventory, got len=%d", iteration, len(freshP.Inventory))
 			}
 			if freshP.AttackCooldown != 0 {
@@ -170,7 +170,7 @@ func TestAdversarial_WorldResetWhileInCombat(t *testing.T) {
 
 		// Verify 20 frames of continuous simulation after reset run without error
 		for f := 0; f < 20; f++ {
-			g.updateSys.Update()
+			g.updateSys.Update(-1)
 		}
 	}
 }
@@ -190,7 +190,7 @@ func TestAdversarial_SimultaneousDeathAndZombieInfection(t *testing.T) {
 	player.ArmorEquipped = false
 
 	// Execute input & combat update (infection drain = 0.05)
-	sys.processInputAndCombat()
+	sys.processInputAndCombat(-1)
 
 	if player.Health > 0 {
 		t.Errorf("Scenario A: Expected Health <= 0, got %f", player.Health)
@@ -240,7 +240,7 @@ func TestAdversarial_SimultaneousDeathAndZombieInfection(t *testing.T) {
 
 	// Scenario D: 100 continuous updates with Dead player should not produce NaNs or underflow
 	for f := 0; f < 100; f++ {
-		sys.Update()
+		sys.Update(-1)
 		if math.IsNaN(player.Health) || math.IsNaN(player.Hunger) || math.IsNaN(player.Thirst) {
 			t.Fatalf("Scenario D: NaN detected in player stats during dead simulation at frame %d", f)
 		}
@@ -441,14 +441,20 @@ func TestAdversarial_InventoryManipulationUnderMaxCapacity(t *testing.T) {
 	}
 
 	// Player starts with empty inventory
-	player.Inventory = []string{}
+	player.Inventory = make([]string, 9)
 
 	// Run processItems()
 	sys.processItems()
 
 	// Invariant 1: Exactly 9 items picked up (inventory capacity limit)
-	if len(player.Inventory) != 9 {
-		t.Fatalf("Expected inventory to reach exactly 9 items, got %d", len(player.Inventory))
+	count := 0
+	for _, it := range player.Inventory {
+		if it != "" {
+			count++
+		}
+	}
+	if count != 9 {
+		t.Fatalf("Expected inventory to reach exactly 9 items, got %d", count)
 	}
 
 	// Invariant 2: Exactly 6 items remain on ground in ECS world
@@ -478,11 +484,17 @@ func TestAdversarial_InventoryManipulationUnderMaxCapacity(t *testing.T) {
 	}
 
 	// Step 3: Consume item from slot 0 (say, food)
-	player.Inventory = player.Inventory[1:] // Now len = 8
+	player.Inventory[0] = "" // Now len = 8
 	sys.processItems()
 
-	if len(player.Inventory) != 9 {
-		t.Errorf("Inventory did not backfill to 9 after consumption: len=%d", len(player.Inventory))
+	count = 0
+	for _, it := range player.Inventory {
+		if it != "" {
+			count++
+		}
+	}
+	if count != 9 {
+		t.Errorf("Inventory did not backfill to 9 after consumption: len=%d", count)
 	}
 	aliveCount3 := 0
 	for _, ent := range groundItems {
@@ -528,12 +540,12 @@ func TestAdversarial_InventoryManipulationUnderMaxCapacity(t *testing.T) {
 					player.WeaponDurability = 10
 				}
 				// Remove from inventory
-				player.Inventory = append(player.Inventory[:slot], player.Inventory[slot+1:]...)
+				player.Inventory[slot] = ""
 			}
 		case 2: // Trigger processItems()
 			sys.processItems()
 		case 3: // Full system update
-			sys.Update()
+			sys.Update(-1)
 		}
 
 		// Invariant checks on every single cycle

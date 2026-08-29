@@ -508,7 +508,7 @@ func TestChallenger_1500FramesHeavyContinuousSimulation(t *testing.T) {
 
 		// Render every 100 frames
 		if frame%100 == 0 {
-			g.drawSys.Draw(offscreen, 12.0)
+			g.drawSys.Draw(offscreen, 12.0, -1)
 		}
 	}
 }
@@ -676,7 +676,7 @@ func TestChallenger_HUDStringsAndReticleTintsMatrix(t *testing.T) {
 			}
 
 			// Render frame
-			drw.Draw(offscreen, 12.0)
+			drw.Draw(offscreen, 12.0, -1)
 		})
 	}
 }

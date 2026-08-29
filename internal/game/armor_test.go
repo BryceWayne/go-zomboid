@@ -368,8 +368,8 @@ func TestArmor_DamageMitigation_HealthDrain(t *testing.T) {
 	armored.ArmorDefense = 0.50
 
 	for i := 0; i < 100; i++ {
-		sys1.processInputAndCombat()
-		sys2.processInputAndCombat()
+		sys1.processInputAndCombat(-1)
+		sys2.processInputAndCombat(-1)
 	}
 
 	lossUnarmored := 100.0 - unarmored.Health

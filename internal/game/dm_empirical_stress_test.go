@@ -423,7 +423,7 @@ func TestEmpirical_ContinuousHeadlessSimulation3500Frames(t *testing.T) {
 		// Run Game Update and Draw
 		err := g.Update()
 		if err != nil {
-			t.Fatalf("Frame %d: Game.Update() returned error: %v", frame, err)
+			t.Fatalf("Frame %d: Game.Update(-1) returned error: %v", frame, err)
 		}
 		g.Draw(screen)
 

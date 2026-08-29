@@ -347,7 +347,7 @@ func TestChallenger_ScreenCenterClickZeroVelocityInvariant(t *testing.T) {
 // SUITE 3: Headless Rendering Loop Execution Across Multi-Frame Simulation & Dynamic Lerp
 // -----------------------------------------------------------------------------------------
 
-// TestChallenger_HeadlessMultiFrameRenderingLoopDynamicLerp tests Game.Update() and Game.Draw()
+// TestChallenger_HeadlessMultiFrameRenderingLoopDynamicLerp tests Game.Update(-1) and Game.Draw()
 // across 360 continuous frames with complex player trajectory patterns and camera lerping.
 func TestChallenger_HeadlessMultiFrameRenderingLoopDynamicLerp(t *testing.T) {
 	assets.Load()
@@ -392,7 +392,7 @@ func TestChallenger_HeadlessMultiFrameRenderingLoopDynamicLerp(t *testing.T) {
 		// Advance game loop
 		err := g.Update()
 		if err != nil {
-			t.Fatalf("Frame %d: Game.Update() failed: %v", frame, err)
+			t.Fatalf("Frame %d: Game.Update(-1) failed: %v", frame, err)
 		}
 
 		// Assert camera position is valid (no NaNs, no Infs)
@@ -448,7 +448,7 @@ func TestChallenger_HeadlessRenderingAllCombatArcsUnderDynamicCamera(t *testing.
 			cam.Y -= 10.0
 
 			// Draw frame with attack arc active
-			drw.Draw(screen, 12.0)
+			drw.Draw(screen, 12.0, -1)
 
 			// Assert no panic, screen remains valid
 			_ = pPos
