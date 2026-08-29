@@ -1,17 +1,14 @@
-## 2026-08-28T18:55:18Z
+## 2026-08-29T15:17:32Z
+You are teamwork_preview_reviewer_m1_1.
+Your working directory is /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1.
+Please read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md, /home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_5/PROJECT.md, and the worker handoff report at /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1/handoff.md.
 
-You are m1_reviewer_1.
-Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1
-Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project Plan File: /home/bryce/code/go-zomboid/PROJECT.md
-Project root: /home/bryce/code/go-zomboid
+Task:
+Perform an objective and thorough code review for Milestone 1 (R1 & R2):
+1. Verify that `cmd/tools/genassets` and root `genassets` binary are completely gone.
+2. Verify that PNG files from `context/` are copied to `internal/assets/images/` without junk (.DS_Store, .psd, etc.).
+3. Verify that `internal/assets/assets.go` exports and loads the new image pointers (`BenchImage`, `ChestImage`, `SculptureImage`, `BushImage`, `FlowerImage`, `StoneImage`, etc.).
+4. Run build and tests: `CC=gcc go test -v ./internal/assets/...` and `CC=gcc go test ./...`.
+5. Clearly state your verdict: APPROVE or REQUEST_CHANGES in your handoff report.
 
-Mission:
-Review Milestone 1 implementation (High-Fidelity Asset Pipeline 4x Scaling).
-1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md and /home/bryce/code/go-zomboid/PROJECT.md.
-2. Read worker handoff: /home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1_1/handoff.md.
-3. Review `cmd/tools/genassets/main.go`, `cmd/tools/genassets/genassets_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, and `internal/assets/assets_stress_test.go`.
-4. Check correctness, mathematical alignment of diamond equations (256x128 2:1 ratio), obstacle rendering (256x256), entity grounding drop shadows (64x128), items/weapons (64x64), and overlay geometry (chevrons, pebbles, planks, nails, stripes, concrete joints, tile grout).
-5. Run `go run ./cmd/tools/genassets` and `CC=gcc go test -v ./cmd/tools/genassets/... ./internal/assets/...`.
-6. Write your review report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/review.md` and `handoff.md` with a clear verdict: APPROVE or REQUEST_CHANGES.
-7. Send a message to your parent when complete.
+Write your review report and handoff to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/handoff.md`. Send a message when complete.

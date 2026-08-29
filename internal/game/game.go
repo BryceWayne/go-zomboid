@@ -910,7 +910,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 			}
 
 			switch t {
-			case world.TileGrass, world.TileTree, world.TileFence, world.TileTent, world.TileElevationBlock, world.TileRamp, world.TileStump, world.TileMushroom, world.TileSign:
+			case world.TileGrass, world.TileTree, world.TileFence, world.TileTent, world.TileElevationBlock, world.TileRamp, world.TileStump, world.TileMushroom, world.TileSign,
+				world.TileBench, world.TileChest, world.TileSculpture, world.TileBush, world.TileFlower, world.TileStone:
 				screen.DrawImage(assets.GrassImage, op)
 			case world.TileDirt:
 				screen.DrawImage(assets.DirtImage, op)
@@ -938,7 +939,8 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 		for x := 0; x < s.gameMap.Width; x++ {
 			t := s.gameMap.GetTile(x, y)
 			if t == world.TileWall || t == world.TileTree || t == world.TileFence || t == world.TileDebris ||
-				t == world.TileTent || t == world.TileElevationBlock || t == world.TileRamp || t == world.TileStump || t == world.TileMushroom || t == world.TileSign {
+				t == world.TileTent || t == world.TileElevationBlock || t == world.TileRamp || t == world.TileStump || t == world.TileMushroom || t == world.TileSign ||
+				t == world.TileBench || t == world.TileChest || t == world.TileSculpture || t == world.TileBush || t == world.TileFlower || t == world.TileStone {
 				worldX := float64(x * world.TileSize)
 				worldY := float64(y * world.TileSize)
 				
@@ -977,14 +979,30 @@ func (s *DrawSystem) Draw(screen *ebiten.Image, timeOfDay float64) {
 					img = assets.MushroomImage
 				case world.TileSign:
 					img = assets.SignImage
+				case world.TileBench:
+					img = assets.BenchImage
+				case world.TileChest:
+					img = assets.ChestImage
+				case world.TileSculpture:
+					img = assets.SculptureImage
+				case world.TileBush:
+					img = assets.BushImage
+				case world.TileFlower:
+					img = assets.FlowerImage
+				case world.TileStone:
+					img = assets.StoneImage
 				}
 
 				if img == nil {
 					continue
 				}
 				
+				bounds := img.Bounds()
+				imgW := float64(bounds.Dx())
+				imgH := float64(bounds.Dy())
+
 				op := &ebiten.DrawImageOptions{}
-				op.GeoM.Translate(-128, -128)
+				op.GeoM.Translate(-imgW/2.0, 128.0-imgH)
 				op.GeoM.Translate(isoX-camX, isoY-camY)
 				op.GeoM.Scale(0.5, 0.5)
 				op.GeoM.Translate(640, 360)

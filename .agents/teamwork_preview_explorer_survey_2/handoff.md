@@ -1,129 +1,95 @@
-# Handoff Report — Engine Isometric Math, World Transforms, and Map Systems Survey
+# Handoff Report: World Map & Tile System Technical Survey (R3)
 
-**Agent**: `survey_explorer_2`  
-**Working Directory**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2`  
-**Handoff Type**: Hard (Task complete)  
-**Survey Report File**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey_report.md`
+**Agent:** `teamwork_preview_explorer_survey_2`  
+**Working Directory:** `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2`  
+**Task:** In-depth technical survey of world map, tile systems, asset mapping, and rendering depth sorting for Requirement R3.
 
 ---
 
 ## 1. Observation
 
-Direct code observations from the codebase:
+1. **World Map Structure (`internal/game/world/map.go:160-173`):**
+   ```go
+   type Map struct {
+       Width, Height int
+       Tiles         []TileType
+       Visible       []bool
+       Explored      []bool
+       PlayerSpawn   FloatPoint
+       Buildings     []Building
+       LootSpawns    []LootSpawn
+       ZombieSpawns  []FloatPoint
+   }
+   ```
+   - Standard map dimension is 100x100 tiles (`TileSize = 128`).
+   - Flat 1D slices indexed via `idx = y * Width + x`.
+   - Bounding queries (`GetTile`, `IsColliding`) guard against out-of-bounds access.
 
-1. **Tile Size & World Grid Definition**:
-   - `internal/game/world/map.go:30`: `const TileSize = 32`.
-   - `internal/game/world/map.go:341-342`: Player spawn coordinate formula:
-     ```go
-     m.PlayerSpawn = FloatPoint{
-         X: float64(playerTileX)*TileSize + 16.0,
-         Y: float64(playerTileY)*TileSize + 16.0,
-     }
-     ```
-   - `internal/game/world/map.go:971-990`: `IsColliding(rectX, rectY, rectW, rectH)` uses `int(rectX) / TileSize` and `int(rectY) / TileSize`.
-   - `internal/game/world/map.go:898`: Safe zombie spawn distance `dist < 350.0`.
+2. **Existing `TileType` Enum & Methods (`internal/game/world/map.go:8-95`):**
+   - Currently defines 16 constants: `TileGrass` (0) through `TileSign` (15).
+   - `IsSolid()` returns `true` for `TileWall`, `TileTree`, `TileFence`, `TileDebris`, `TileTent`, `TileElevationBlock`, `TileStump`, `TileSign`.
+   - `BlocksVision()` returns `true` exclusively for `TileWall` (line 44).
+   - `IsFloor()` returns `true` for flat terrain: `TileGrass`, `TileDirt`, `TileWoodFloor`, `TileAsphalt`, `TileConcrete`, `TileTileFloor`, `TileRamp` (line 50).
 
-2. **Isometric Projection & Unprojection Functions**:
-   - `internal/game/game.go:744-748`:
-     ```go
-     func WorldToIso(wx, wy float64) (isoX, isoY float64) {
-         isoX = wx - wy
-         isoY = (wx + wy) / 2.0
-         return
-     }
-     ```
-   - `internal/game/game.go:750-754`:
-     ```go
-     func IsoToWorld(isoX, isoY float64) (wx, wy float64) {
-         wx = isoY + isoX/2.0
-         wy = isoY - isoX/2.0
-         return
-     }
-     ```
+3. **External Assets in `context/` (`find context -name "*.png"`):**
+   - `Small Forest/Bench and chest/Bench.png` (52x37 RGBA)
+   - `Small Forest/Bench and chest/Chest.png` (22x21 RGBA)
+   - `Small Forest/Sculptures/Sculpture-1.png` (23x31 RGBA), `Sculture-2.png` (29x32 RGBA)
+   - `Small Forest/Bushes/Bush-1.png` .. `Bush-4.png` (19x15 to 28x19 RGBA), `Stump.png` (29x19 RGBA)
+   - `Small Forest/Flowers/Flower-1.png` .. `Flower-3.png` (24x22 to 26x25 RGBA)
+   - `Small Forest/Stones/Stone-1.png` (28x19 RGBA), `Stone-2.png` (29x25 RGBA)
+   - `Small Forest/Ground tileset/`, `Trees/`, `Fences/`
+   - `Lab/Inside_C.png` (768x768)
+   - `Zombie Apocalypse Tileset/Organized separated sprites/` (Urban Assets, Modular Barns, Roads, Pickable Items, Character/Zombie sheets)
 
-3. **Camera & Viewport Translation**:
-   - `internal/game/game.go:140-142`: Viewport size is `800 x 600`.
-   - `internal/game/game.go:352-353, 796-797`: Camera is centered on the player in isometric space:
-     ```go
-     isoX, isoY := WorldToIso(pPos.X, pPos.Y)
-     camX = isoX - 400
-     camY = isoY - 300
-     ```
+4. **Rendering & Depth-Sorting Pipeline (`internal/game/game.go:879-1168`):**
+   - Pass 1 (lines 879-927): Draws flat floor diamonds using `assets.GrassImage`, `assets.DirtImage`, `assets.WoodImage`, etc.
+   - Pass 2 (lines 937-1168): Gathers all vertical obstacle tiles, world items, and character/zombie entities into a `sprites []Renderable` slice with `Depth = worldX + worldY`, then sorts via `sort.SliceStable(sprites, func(i, j int) bool { return sprites[i].Depth < sprites[j].Depth })`.
 
-4. **Sprite Anchor Offsets in DrawSystem**:
-   - `internal/game/game.go:825-826`: Ground tiles ($64 \times 32$ diamond) translated by `drawX := isoX - 32 - camX`, `drawY := isoY - 0 - camY`.
-   - `internal/game/game.go:909-910`: Vertical obstacles ($64 \times 64$) translated by `drawX := isoX - 32 - camX`, `drawY := isoY - 32 - camY`.
-   - `internal/game/game.go:948-949`: Items ($16 \times 16$) translated by `drawX := isoX - 8 - camX`, `drawY := isoY - 8 - camY`.
-   - `internal/game/game.go:1009-1010`: Characters ($16 \times 32$) translated by `drawX := isoX - 8 - camX`, `drawY := isoY - 32 - camY`.
-
-5. **Entity Speeds, Colliders, and Physics**:
-   - `internal/game/game.go:65, 98`: Colliders are `Collider{Width: 16, Height: 16}`.
-   - `internal/game/game.go:263`: Player movement speed `speed := 3.0` px/frame.
-   - `internal/game/game.go:80, 82`: Normal zombie speed $1.0 \sim 1.5$ px/frame, Runner zombie speed $2.2 \sim 2.6$ px/frame.
-   - `internal/game/game.go:615-616`: Boid separation radius $20.0$ px, separation force $2.0$.
-   - `internal/game/game.go:483, 560`: Unarmed shove knockback velocity $5.0 \times \text{Facing}$.
-   - `internal/game/game.go:211`: Item pickup radius $16.0$ px.
-   - `internal/game/game.go:637`: Zombie bite contact distance $14.0$ px.
-   - `internal/game/game.go:433, 446, 458`: Shotgun max range $160.0$ px, point-blank $24.0$ px, acoustic noise pulse $400.0$ px.
-   - `internal/game/game.go:489, 519, 549`: Axe cleave reach $32.0$ px (radius $32.0$), bat/shove reach $24.0$ px (radius $24.0$).
-   - `internal/game/game.go:594, 598, 670`: Zombie hearing $50.0 / 200.0$ px, vision $150.0$ px, de-aggro $400.0$ px.
-   - `internal/game/game.go:800`: Vision cutoff radius $250.0$ px.
-
-6. **Depth Sorting**:
-   - `internal/game/game.go:921, 976, 1044, 1076`: `Depth: worldX + worldY` (or `pos.X + pos.Y`).
-   - `internal/game/game.go:1086-1088`: Stable sorting in ascending depth order.
+5. **Existing World & Map Tests (`internal/game/world/map_test.go`, `world_empirical_stress_test.go`):**
+   - `map_test.go` verifies `solidTiles`, `nonSolidTiles`, `floorTiles`, `BlocksVision`, `String()`, `TestNewMapProceduralTown`, `TestPlayerSafeSpawn`, `TestContextualLootSpawns`, `TestZombieSpawnsNoTrapping`, `TestCollisionDetection`, `TestFOVAndOcclusion`.
+   - `world_empirical_stress_test.go` tests that the first 10 core tile types are generated in `NewMap(100, 100)` with count $> 0$.
+   - `game_stress_test.go:245-384` stress-tests rendering across 24h lighting cycles, fog of war, and dead player states.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Projection Geometry**:
-   - In 2:1 isometric projection, a Cartesian square of size $S \times S$ in world space projects into a 2D diamond of width $2S$ and height $S$.
-   - For $S = 32$, the projected diamond is $64 \times 32$, matching the current floor textures in `internal/assets/images`.
-   - When the floor textures are scaled to $256 \times 128$ (4x higher resolution), the corresponding Cartesian world tile size must scale proportionally to $S = 128$ ($32 \times 4$).
-
-2. **Mathematical Invariance of Coordinate Transforms**:
-   - `WorldToIso` and `IsoToWorld` perform a linear basis transformation $\begin{pmatrix} 1 & -1 \\ 0.5 & 0.5 \end{pmatrix}$.
-   - Because this linear transformation is homogeneous, scaling the world coordinates $(wx, wy)$ by $4\times$ causes the isometric screen coordinates $(isoX, isoY)$ to scale by exactly $4\times$.
-   - Consequently, the mathematical formulas for `WorldToIso` and `IsoToWorld` remain structurally unchanged; they automatically scale.
-
-3. **Speed and Physics Invariance**:
-   - The time required for an entity to traverse one tile at velocity $v$ across tile size $S$ is $T = S / v$.
-   - For $S = 32$ and $v_{player} = 3.0$, $T \approx 10.67$ frames per tile.
-   - When $S = 128$, setting $v_{player} = 12.0$ ($3.0 \times 4$) keeps $T = 128 / 12.0 \approx 10.67$ frames per tile, ensuring identical gameplay pacing.
-   - Similarly, all physical radii (colliders, attack reaches, hearing/vision radii, spawn distances) scale linearly by $4\times$.
-
-4. **Depth Sorting Invariance**:
-   - Monotonic sorting on $\text{Depth} = wx + wy$ is preserved under positive linear scaling: if $w_1 + h_1 < w_2 + h_2$, then $4(w_1 + h_1) < 4(w_2 + h_2)$.
+1. **From Observation 1 & 2:** The game world uses an integer `TileType` abstraction where each tile governs physics (`IsSolid`), raycast occlusion (`BlocksVision`), and render staging (`IsFloor`).
+2. **From Observation 3 & Requirement R3:** The user request explicitly names Benches, Chests, and Sculptures as new assets that must be mapped into the game world as new `TileType` constants. Expanding this with Bushes, Flowers, and Stones provides complete coverage of the `Small Forest` asset pack.
+3. **From Observation 2 & 4:** To render these objects seamlessly without visual artifacts or holes in the terrain mesh:
+   - In Pass 1 (Ground diamond pass), the cell underneath each prop must be drawn as `assets.GrassImage` (or `ConcreteImage`).
+   - In Pass 2 (Sprite pass), each new tile type must be added to the sprite collector with `Depth = worldX + worldY` and mapped to `assets.<Name>Image`.
+4. **From Observation 1 & 5:** Placing these props in `internal/game/world/map.go` within `placeEnvironmentalProps` allows town parks, sidewalks, yards, and warehouses to feature sculptures, benches, chests, bushes, flowers, and stones without breaking building footprints, road corridors, or safe player/zombie spawn distances ($> 1400$px).
+5. **From Observation 5:** Adding new `TileType` constants with IDs 16..21 maintains 100% backward compatibility with all existing test suites while enabling full visual and physical simulation.
 
 ---
 
 ## 3. Caveats
 
-- **Test Suite Updates**: 15+ unit and stress tests across `internal/game`, `internal/game/world`, and `internal/assets` contain hardcoded numeric assertions based on the 32px tile size (e.g. `TestWorldToIso` test table, safe distance 350.0, collider bounds 16x16, asset dimensions 64x32). When implementing the 4x upgrade, these test assertions must be updated synchronously with code changes.
-- **Bezier Curves (Milestone 3)**: Weapon swing curves will take control points in world/isometric coordinates; scaling to 128px tile size will naturally increase the pixel radius of the swing arc ($32\text{px} \to 128\text{px}$), which provides ample screen space for smooth quadratic/cubic Bezier curve visualization.
+- **Asset Test Dependency on `genassets`:** In `internal/assets/empirical_challenger_test.go:336`, there is an existing test executing `go run ./cmd/tools/genassets`. When `cmd/tools/genassets` is retired per Requirement R1, this test will fail unless updated to test native image loading instead of invoking `genassets`.
+- **Tileset Sheet Slicing vs Single PNGs:** While `Bench.png`, `Chest.png`, `Sculpture-1.png`, etc. are discrete PNGs, `Lab/Inside_C.png` is a 768x768 multi-tile sheet. For R3, discrete prop PNGs should be imported directly into `internal/assets/images/`.
+- No assumptions made outside the codebase.
 
 ---
 
 ## 4. Conclusion
 
-The engine's isometric coordinate system is mathematically clean, decoupled, and ready for the 256x128 (4x) resolution upgrade.
+Requirement R3 can be satisfied cleanly by:
+1. Adding 6 new `TileType` constants to `internal/game/world/map.go`: `TileBench` (16), `TileChest` (17), `TileSculpture` (18), `TileBush` (19), `TileFlower` (20), `TileStone` (21).
+2. Implementing the property methods: `TileBench`, `TileChest`, `TileSculpture`, `TileStone` as solid (`IsSolid() == true`); `TileBush`, `TileFlower` as walkable (`IsSolid() == false`); all transparent to vision (`BlocksVision() == false`) and non-floor (`IsFloor() == false`).
+3. Updating `placeEnvironmentalProps` in `map.go` to generate sculptures in town plazas, benches on sidewalks/yards, chests in warehouses/campsites, and natural bushes/flowers/stones across parklands.
+4. Updating `internal/assets/assets.go` to load `BenchImage`, `ChestImage`, `SculptureImage`, `BushImage`, `FlowerImage`, `StoneImage`.
+5. Updating `DrawSystem.Draw` in `internal/game/game.go` to render underlying ground in Pass 1 and depth-sort props in Pass 2.
 
-To complete the upgrade seamlessly without breaking map generation, entity physics, or camera tracking:
-1. Update `const TileSize = 128` in `internal/game/world/map.go` and scale spawn offsets to $+64.0$ and safe perimeter to $1400.0$.
-2. Update texture generation in `cmd/tools/genassets/main.go` to output $256 \times 128$ floor diamonds, $256 \times 256$ obstacle cubes, $64 \times 128$ character entities, and $64 \times 64$ items.
-3. Update `DrawSystem` sprite anchors to $(-128, 0)$ for floors, $(-128, -128)$ for walls, $(-32, -128)$ for characters, and $(-32, -32)$ for items.
-4. Scale player speed to $12.0$, normal zombie speed to $4.0 \sim 6.0$, runner speed to $8.8 \sim 10.4$, colliders to $64 \times 64$, and combat/AI ranges by $4\times$.
-5. Update test expectations across `internal/assets/assets_test.go`, `internal/game/*_test.go`, and `internal/game/world/*_test.go`.
-
-Full survey details are documented in `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey_report.md`.
+The comprehensive survey report has been written to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey.md`.
 
 ---
 
 ## 5. Verification Method
 
-To verify the existing test suite and codebase integrity:
-```bash
-CC=gcc go test ./...
-```
-Expected result: All tests in all packages pass (`cmd/tools/genassets`, `internal/assets`, `internal/ecs`, `internal/game`, `internal/game/world`).
+1. **Survey Artifact Inspection:**
+   - Inspect `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey.md` for full technical details, property tables, coordinate transformations, and implementation plans.
+2. **Current Test Suite Baseline Execution:**
+   - Run: `CC=gcc go test -v -count=1 ./internal/game/world/... ./internal/game/...`
+   - Invalidation condition: Any failure in `map_test.go` or `world_empirical_stress_test.go`.

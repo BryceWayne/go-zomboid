@@ -1,16 +1,16 @@
-## 2026-08-28T18:47:56Z
-You are survey_explorer_2.
-Your working directory is: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2
-Original Request File: /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md
-Project root: /home/bryce/code/go-zomboid
+## 2026-08-29T15:12:30Z
 
-Mission:
-Investigate the engine isometric math, world coordinate transforms, movement, camera, and map systems.
-Specifically:
-1. Read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md.
-2. Examine `internal/game/world` and `internal/game/game.go`, `internal/game/render.go`, `internal/game/player.go`, `internal/game/zombie.go`, etc.
-3. Identify all constants and math: `TileSize`, `WorldToIso`, `IsoToWorld`, speed coefficients, tile width/height, half widths/heights, camera offsets, screen centering, chunk sizing, collision bounding boxes.
-4. How do current math functions convert between world coordinates, isometric screen coordinates, and tile grid indexes?
-5. How should `TileSize` and coordinate math be upgraded for 256x128 (4x texture resolution) so that map generation, tile positioning, sorting, entity positions, collision detection, movement speed, and camera tracking remain seamless and non-broken?
-6. Write a comprehensive survey report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey_report.md` and `handoff.md`.
-7. Send a message to your parent when complete.
+You are teamwork_preview_explorer_survey_2.
+Your working directory is /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2.
+Please read /home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md.
+
+Task:
+Conduct an in-depth technical survey of the world map and tile systems:
+1. Explore `/home/bryce/code/go-zomboid/internal/game/world/` (especially `map.go`, world generation, tile definitions, map tests).
+2. Examine existing `TileType` constants, how tiles are represented, collision/blocking properties, placement logic, chunk or grid systems.
+3. Analyze what new `TileType` constants are needed for the new assets (e.g., Benches, Chests, Sculptures, and any other objects found in `context/`).
+4. Check how the world map generates or places objects, and what map tests exist in `internal/game/world/` or across the repository.
+5. Formulate recommendations for new `TileType` constants, properties, placement, and mapping into the game world to satisfy R3.
+
+Write your comprehensive survey report to `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey.md`.
+Also write a structured `handoff.md` and update `progress.md` with your status. Send a message when done.

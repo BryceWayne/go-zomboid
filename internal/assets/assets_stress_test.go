@@ -183,7 +183,14 @@ func TestAssetsLoadIdempotency(t *testing.T) {
 			ElevationBlockImage == nil || ElevationRampImage == nil ||
 			WeaponImage == nil || AxeImage == nil || ShotgunImage == nil ||
 			AmmoImage == nil || ArmorImage == nil || AntidoteImage == nil ||
-			FoodImage == nil || WaterImage == nil {
+			FoodImage == nil || WaterImage == nil ||
+			BenchImage == nil || ChestImage == nil ||
+			Sculpture1Image == nil || Sculpture2Image == nil || SculptureImage == nil ||
+			Bush1Image == nil || Bush2Image == nil || Bush3Image == nil || Bush4Image == nil || BushImage == nil ||
+			Flower1Image == nil || Flower2Image == nil || Flower3Image == nil || FlowerImage == nil ||
+			Stone1Image == nil || Stone2Image == nil || StoneImage == nil ||
+			ForestStumpImage == nil || GrassTuft1Image == nil || GrassTuft2Image == nil ||
+			LabTilesetImage == nil || ZombieTilesetImage == nil {
 			t.Fatalf("iteration %d: one or more asset pointers is nil after Load()", i)
 		}
 	}

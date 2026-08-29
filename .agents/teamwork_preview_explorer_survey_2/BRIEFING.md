@@ -1,31 +1,33 @@
-# BRIEFING — 2026-08-28T18:50:00Z
+# BRIEFING — 2026-08-29T15:14:30Z
 
 ## Mission
-Investigate the engine isometric math, world coordinate transforms, movement, camera, and map systems for the Project Zomboid Go recreation and assess requirements/strategies for upgrading tile size and math to 256x128 (4x texture resolution).
+Conduct an in-depth technical survey of the world map and tile systems in go-zomboid to support integrating new tiles/assets for R3.
 
 ## 🔒 My Identity
 - Archetype: explorer
 - Roles: investigator, reporter
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2
-- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Milestone: codebase survey
+- Original parent: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Milestone: survey
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement
-- Analyze math, transforms, movement, camera, map systems, collision, sorting, and 256x128 migration implications.
+- Read-only investigation — do NOT implement / modify source code
+- Write only to .agents/teamwork_preview_explorer_survey_2/
+- Follow Handoff Protocol and Communication Guideline
 
 ## Current Parent
-- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Updated: 2026-08-28T18:50:00Z
+- Conversation ID: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Updated: not yet
 
 ## Investigation State
-- **Explored paths**: `internal/game/world/map.go`, `internal/game/game.go`, `internal/ecs/components.go`, `cmd/tools/genassets/main.go`, `internal/assets/assets.go`, all unit and stress tests.
-- **Key findings**: Documented all constants, formulas, transforms, anchors, speeds, ranges, colliders, and full 4x upgrade requirements for 256x128 resolution.
-- **Unexplored areas**: None for this survey mission.
+- **Explored paths**: `internal/game/world/map.go`, `internal/game/world/map_test.go`, `internal/game/world/world_empirical_stress_test.go`, `internal/game/game.go`, `internal/game/game_stress_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/empirical_challenger_test.go`, `context/` assets
+- **Key findings**: Complete mapping formulated for 6 new `TileType` constants (TileBench, TileChest, TileSculpture, TileBush, TileFlower, TileStone), 2-pass isometric rendering and depth-sorting logic, placement strategy in `placeEnvironmentalProps`, and test suite compatibility.
+- **Unexplored areas**: None within survey scope.
 
 ## Key Decisions Made
-- Produced comprehensive `survey_report.md` and 5-component `handoff.md`.
+- Formulated full recommendations in `survey.md` and `handoff.md`.
 
 ## Artifact Index
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey_report.md` — Comprehensive Survey Report
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/handoff.md` — 5-Component Handoff Report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/survey.md` — Comprehensive survey report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/handoff.md` — 5-component handoff report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_2/progress.md` — Liveness & task heartbeat

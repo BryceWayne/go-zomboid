@@ -2,14 +2,9 @@ package assets
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"image"
 	_ "image/png"
 	"math"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"testing"
 )
 
@@ -299,62 +294,7 @@ func TestEmpiricalCharacterGrounding(t *testing.T) {
 	}
 }
 
-// TestEmpiricalGenerationDeterminism checks SHA-256 hashes across repeated executions of genassets.
-func TestEmpiricalGenerationDeterminism(t *testing.T) {
-	// Find project root
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get current working directory: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			break
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatalf("could not find project root containing go.mod")
-		}
-		dir = parent
-	}
 
-	imagesDir := filepath.Join(dir, "internal/assets/images")
-
-	// 1. Record baseline hashes
-	baselineHashes := make(map[string]string)
-	for _, spec := range all27AssetSpecs {
-		imgPath := filepath.Join(imagesDir, filepath.Base(spec.Path))
-		data, err := os.ReadFile(imgPath)
-		if err != nil {
-			t.Fatalf("failed to read %s: %v", imgPath, err)
-		}
-		h := sha256.Sum256(data)
-		baselineHashes[spec.Path] = hex.EncodeToString(h[:])
-	}
-
-	// 2. Run genassets binary 2 times consecutively and verify bit-for-bit identity
-	for run := 1; run <= 2; run++ {
-		cmd := exec.Command("go", "run", "./cmd/tools/genassets")
-		cmd.Dir = dir
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Run %d failed: go run ./cmd/tools/genassets: %v\n%s", run, err, string(output))
-		}
-
-		for _, spec := range all27AssetSpecs {
-			imgPath := filepath.Join(imagesDir, filepath.Base(spec.Path))
-			data, err := os.ReadFile(imgPath)
-			if err != nil {
-				t.Fatalf("failed to read %s on run %d: %v", imgPath, run, err)
-			}
-			h := sha256.Sum256(data)
-			currHash := hex.EncodeToString(h[:])
-			if currHash != baselineHashes[spec.Path] {
-				t.Fatalf("Run %d: non-deterministic output for %s: got %s, expected %s",
-					run, spec.Path, currHash, baselineHashes[spec.Path])
-			}
-		}
-	}
-}
 
 // TestEmpiricalObstacleBoundsAndGrounding verifies vertical obstacles have grounding anchors.
 func TestEmpiricalObstacleBoundsAndGrounding(t *testing.T) {

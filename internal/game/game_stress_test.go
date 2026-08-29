@@ -257,6 +257,18 @@ func TestIsometricRenderingAllTileTypesAndPropsStress(t *testing.T) {
 		world.TileTileFloor,
 		world.TileFence,
 		world.TileDebris,
+		world.TileTent,
+		world.TileElevationBlock,
+		world.TileRamp,
+		world.TileStump,
+		world.TileMushroom,
+		world.TileSign,
+		world.TileBench,
+		world.TileChest,
+		world.TileSculpture,
+		world.TileBush,
+		world.TileFlower,
+		world.TileStone,
 	}
 
 	itemTypes := []string{"food", "water", "weapon", "axe", "shotgun", "ammo", "armor", "unknown_item"}

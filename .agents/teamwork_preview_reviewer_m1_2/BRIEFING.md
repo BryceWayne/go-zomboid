@@ -1,55 +1,47 @@
-# BRIEFING — 2026-08-28T18:56:40Z
+# BRIEFING — 2026-08-29T15:19:50Z
 
 ## Mission
-Review and adversarially stress-test Milestone 1 implementation (High-Fidelity Asset Pipeline 4x Scaling) across `cmd/tools/genassets` and `internal/assets`.
+Perform independent code and architecture quality review and adversarial challenge for Milestone 1 (R1 & R2 asset loader enhancements).
 
 ## 🔒 My Identity
-- Archetype: reviewer_critic
+- Archetype: reviewer / critic
 - Roles: reviewer, critic
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_2
-- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Milestone: milestone_1
+- Original parent: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Milestone: Milestone 1 (R1 & R2)
 - Instance: 2 of 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Rigorously check for integrity violations (hardcoded test data, fake logic, dummy pipelines)
-- Perform independent test executions and adversarial edge-case analysis
+- Must independently verify build and test commands
+- Must check integrity violations (no dummy code, no hardcoded cheating)
+- Deliver 5-component handoff report with explicit verdict
 
 ## Current Parent
-- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Updated: 2026-08-28T18:56:40Z
+- Conversation ID: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Updated: not yet
 
 ## Review Scope
-- **Files to review**: `cmd/tools/genassets/main.go`, `cmd/tools/genassets/genassets_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/assets_stress_test.go`
-- **Interface contracts**: `/home/bryce/code/go-zomboid/PROJECT.md`, `/home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md`
-- **Review criteria**: correctness, determinism, edge cases, asset embedding, memory stability, sprite sheet dimensions & indexing, integrity violations
+- **Files to review**: `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/empirical_challenger_test.go`
+- **Interface contracts**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_5/PROJECT.md`, `/home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md`
+- **Review criteria**: Interface compatibility, nil safety, error propagation/handling in `Load()`, regression avoidance, integrity check, test coverage and edge cases
+
+## Key Decisions Made
+- Confirmed R1 procedural generation retirement is fully implemented (genassets deleted, determinism tests decoupled).
+- Confirmed R2 pointer declarations, aliases, and dimensions match requirements in `assets.go`.
+- Verified `sync.Once` thread safety under concurrent `Load()` invocations.
+- Identified blocker defect: `90┬║ Rotatable Bridge Sprites` directory contains non-ASCII characters causing Go toolchain `embed` to omit 3 PNG files from `imageFS`, causing `CC=gcc go test ./...` to fail.
+- Issued verdict: `REQUEST_CHANGES`.
+
+## Artifact Index
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_2/handoff.md` — Final review report, findings, and verdict
 
 ## Review Checklist
-- **Items reviewed**:
-  - `cmd/tools/genassets/main.go` (27 procedural generators, Porter-Duff alpha blending, vector helpers)
-  - `cmd/tools/genassets/genassets_test.go` (SHA-256 repeatability, dimension verification, pixel density checks)
-  - `internal/assets/assets.go` (`//go:embed images/*`, `Load()`, `*ebiten.Image` pointers)
-  - `internal/assets/assets_test.go` (27 embedded asset dimensions & validity, non-nil pointers)
-  - `internal/assets/assets_stress_test.go` (isometric bounds, ground anchoring, item contrast, loader idempotency)
-- **Verdict**: APPROVE
+- **Items reviewed**: `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/assets_stress_test.go`, `internal/assets/empirical_challenger_test.go`, `internal/assets/milestone1_challenger_test.go`, `internal/assets/m1_adversarial_challenger_test.go`
+- **Verdict**: REQUEST_CHANGES
 - **Unverified claims**: None
 
 ## Attack Surface
-- **Hypotheses tested**:
-  - Diamond boundary bleeding tested and rejected (0 bleed pixels outside 2:1 dimetric bounds)
-  - Character floating/misalignment tested and rejected (ground anchors confirmed in $y \in [112..127]$)
-  - Item outline low-contrast tested and rejected (solid pixels $\ge 320$, dark perimeter $<80$ lum confirmed)
-  - Non-deterministic PNG encoding tested and rejected (SHA-256 identical across iterations)
-  - Multi-call memory corruption tested and rejected (`Load()` idempotent)
-- **Vulnerabilities found**: None. 1 minor cosmetic comment discrepancy noted in `internal/assets/assets.go`.
-- **Untested angles**: None within M1 scope.
-
-## Key Decisions Made
-- Issued verdict of APPROVE for Milestone 1.
-- Documented full review report in `review.md` and 5-component handoff in `handoff.md`.
-
-## Artifact Index
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_2/review.md` — Detailed review report
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_2/handoff.md` — 5-component handoff report
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_2/progress.md` — Liveness heartbeat
+- **Hypotheses tested**: Concurrency data races in `Load()`, directory name ASCII character constraints in Go `//go:embed`, downstream package regressions in `ecs`, `game`, `game/world`
+- **Vulnerabilities found**: 3 PNG files skipped by `//go:embed` due to non-ASCII directory name `90┬║ Rotatable Bridge Sprites`
+- **Untested angles**: Milestone 2 and Milestone 3 world map integration (deferred to M2/M3)

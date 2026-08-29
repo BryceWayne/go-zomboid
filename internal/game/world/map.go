@@ -25,6 +25,12 @@ const (
 	TileStump
 	TileMushroom
 	TileSign
+	TileBench
+	TileChest
+	TileSculpture
+	TileBush
+	TileFlower
+	TileStone
 )
 
 const TileSize = 128
@@ -32,7 +38,8 @@ const TileSize = 128
 // IsSolid returns true if the tile blocks physical entity movement and collision.
 func (t TileType) IsSolid() bool {
 	switch t {
-	case TileWall, TileTree, TileFence, TileDebris, TileTent, TileElevationBlock, TileStump, TileSign:
+	case TileWall, TileTree, TileFence, TileDebris, TileTent, TileElevationBlock, TileStump, TileSign,
+		TileBench, TileChest, TileSculpture, TileStone:
 		return true
 	default:
 		return false
@@ -89,6 +96,18 @@ func (t TileType) String() string {
 		return "Mushroom"
 	case TileSign:
 		return "Sign"
+	case TileBench:
+		return "Bench"
+	case TileChest:
+		return "Chest"
+	case TileSculpture:
+		return "Sculpture"
+	case TileBush:
+		return "Bush"
+	case TileFlower:
+		return "Flower"
+	case TileStone:
+		return "Stone"
 	default:
 		return "Unknown"
 	}
@@ -755,24 +774,119 @@ func (m *Map) placeEnvironmentalProps(width, height, midX, midY int) {
 		}
 	}
 
-	for i := 0; i < 120; i++ {
+	// Procedural Sculptures in Town Plazas / Parks
+	sculptures := []Point{
+		{midX + 28, 5},
+		{midX - 10, midY + 4},
+	}
+	for _, p := range sculptures {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			if m.GetTile(p.X, p.Y) == TileGrass {
+				m.SetTile(p.X, p.Y, TileSculpture)
+			}
+		}
+	}
+
+	// Procedural Benches in Parks, Sidewalks, Front Yards, and Storefronts
+	benches := []Point{
+		{midX + 27, 5},       // NE park plaza
+		{midX + 29, 5},       // NE park plaza
+		{midX - 3, midY - 6}, // Sidewalk
+		{midX + 3, midY + 6}, // Sidewalk
+		{12, 6},              // Residential front yard
+		{30, 6},              // Residential front yard
+	}
+	for _, p := range benches {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			cur := m.GetTile(p.X, p.Y)
+			if cur == TileGrass || cur == TileConcrete {
+				m.SetTile(p.X, p.Y, TileBench)
+			}
+		}
+	}
+
+	// Procedural Storage Chests in Houses, Campsite, and Warehouse
+	chests := []Point{
+		{midX + 22, midY + 8}, // Warehouse corner
+		{width - 10, 9},        // Campsite
+		{11, 9},               // House 1 bedroom corner
+		{11, midY + 7},        // Police armory corner
+	}
+	for _, p := range chests {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			cur := m.GetTile(p.X, p.Y)
+			if cur == TileGrass || cur == TileConcrete || cur == TileWoodFloor {
+				m.SetTile(p.X, p.Y, TileChest)
+			}
+		}
+	}
+
+	// Fixed decorative flowers around plazas
+	flowerBeds := []Point{
+		{midX + 28, 4}, {midX + 28, 6},
+		{midX - 10, midY + 3}, {midX - 10, midY + 5},
+	}
+	for _, p := range flowerBeds {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			if m.GetTile(p.X, p.Y) == TileGrass {
+				m.SetTile(p.X, p.Y, TileFlower)
+			}
+		}
+	}
+
+	// Fixed stones along dirt trails and park borders
+	stones := []Point{
+		{5, 5}, {7, 5}, {width - 7, height - 7}, {width - 9, height - 7},
+	}
+	for _, p := range stones {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			if m.GetTile(p.X, p.Y) == TileGrass {
+				m.SetTile(p.X, p.Y, TileStone)
+			}
+		}
+	}
+
+	// Fixed bushes along residential fences and building perimeters
+	bushes := []Point{
+		{8, 6}, {9, 6}, {26, 6}, {27, 6}, {midX + 26, 7},
+	}
+	for _, p := range bushes {
+		if p.X > 0 && p.X < width-1 && p.Y > 0 && p.Y < height-1 {
+			if m.GetTile(p.X, p.Y) == TileGrass {
+				m.SetTile(p.X, p.Y, TileBush)
+			}
+		}
+	}
+
+	for i := 0; i < 180; i++ {
 		tx := 2 + rand.Intn(width-4)
 		ty := 2 + rand.Intn(height-4)
 		if m.GetTile(tx, ty) == TileGrass {
 			if math.Abs(float64(tx-midX)) > 3 && math.Abs(float64(ty-midY)) > 3 {
-				// 10% chance for a stump instead of a tree
-				if rand.Float64() < 0.10 {
-					m.SetTile(tx, ty, TileStump)
-				} else {
+				roll := rand.Float64()
+				if roll < 0.40 {
+					// 40% Trees (+ chance for mushrooms)
 					m.SetTile(tx, ty, TileTree)
-				}
-				// chance to spawn mushroom near tree
-				if rand.Float64() < 0.3 {
-					mx, my := tx+rand.Intn(3)-1, ty+rand.Intn(3)-1
-					if mx > 0 && mx < width-1 && my > 0 && my < height-1 && m.GetTile(mx, my) == TileGrass {
-						m.SetTile(mx, my, TileMushroom)
+					if rand.Float64() < 0.3 {
+						mx, my := tx + rand.Intn(3) - 1, ty + rand.Intn(3) - 1
+						if mx > 0 && mx < width-1 && my > 0 && my < height-1 && m.GetTile(mx, my) == TileGrass {
+							m.SetTile(mx, my, TileMushroom)
+						}
 					}
+				} else if roll < 0.50 {
+					// 10% Stumps
+					m.SetTile(tx, ty, TileStump)
+				} else if roll < 0.65 {
+					// 15% Bushes
+					m.SetTile(tx, ty, TileBush)
+				} else if roll < 0.80 {
+					// 15% Flowers
+					m.SetTile(tx, ty, TileFlower)
+				} else if roll < 0.95 {
+					// 15% Stones
+					m.SetTile(tx, ty, TileStone)
 				}
+				// 5% remains natural grass
 			}
 		}
 	}

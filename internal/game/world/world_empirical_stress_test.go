@@ -426,3 +426,36 @@ func TestEmpirical_LootDistributionAndWalkability(t *testing.T) {
 		}
 	}
 }
+
+// TestEmpirical_AllNewPropTileTypesGenerated verifies that all 6 new prop TileTypes
+// (TileBench, TileChest, TileSculpture, TileBush, TileFlower, TileStone) are generated
+// with non-zero occurrence across multiple map generations.
+func TestEmpirical_AllNewPropTileTypesGenerated(t *testing.T) {
+	newProps := []TileType{
+		TileBench,
+		TileChest,
+		TileSculpture,
+		TileBush,
+		TileFlower,
+		TileStone,
+	}
+
+	for iter := 0; iter < 20; iter++ {
+		m := NewMap(100, 100)
+		counts := make(map[TileType]int)
+		for _, tile := range m.Tiles {
+			counts[tile]++
+		}
+
+		for _, prop := range newProps {
+			c := counts[prop]
+			if c == 0 {
+				t.Fatalf("FAIL: Iter %d: New prop %v (%s) was NOT generated (count = 0)", iter, prop, prop.String())
+			}
+			if iter == 0 {
+				t.Logf("PASS: Iter 0: Prop %-12s (ID %d): count = %4d", prop.String(), prop, c)
+			}
+		}
+	}
+}
+

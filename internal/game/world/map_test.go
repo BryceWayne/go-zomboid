@@ -6,55 +6,76 @@ import (
 )
 
 func TestTileTypeProperties(t *testing.T) {
-	solidTiles := []TileType{TileWall, TileTree, TileFence, TileDebris}
+	solidTiles := []TileType{
+		TileWall, TileTree, TileFence, TileDebris, TileTent, TileElevationBlock, TileStump, TileSign,
+		TileBench, TileChest, TileSculpture, TileStone,
+	}
 	for _, tile := range solidTiles {
 		if !tile.IsSolid() {
-			t.Errorf("Expected tile %v to be solid", tile)
+			t.Errorf("Expected tile %v (%s) to be solid", tile, tile.String())
 		}
 	}
 
-	nonSolidTiles := []TileType{TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor}
+	nonSolidTiles := []TileType{
+		TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor, TileRamp, TileMushroom,
+		TileBush, TileFlower,
+	}
 	for _, tile := range nonSolidTiles {
 		if tile.IsSolid() {
-			t.Errorf("Expected tile %v to NOT be solid", tile)
+			t.Errorf("Expected tile %v (%s) to NOT be solid", tile, tile.String())
 		}
 	}
 
-	// Vision blocking
+	// Vision blocking: only TileWall blocks vision
 	if !TileWall.BlocksVision() {
 		t.Errorf("Expected TileWall to block vision")
 	}
-	if TileFence.BlocksVision() {
-		t.Errorf("Expected TileFence to NOT block vision")
+	transparentTiles := []TileType{
+		TileGrass, TileDirt, TileWoodFloor, TileTree, TileAsphalt, TileConcrete, TileTileFloor,
+		TileFence, TileDebris, TileTent, TileElevationBlock, TileRamp, TileStump, TileMushroom, TileSign,
+		TileBench, TileChest, TileSculpture, TileBush, TileFlower, TileStone,
 	}
-	if TileDebris.BlocksVision() {
-		t.Errorf("Expected TileDebris to NOT block vision")
-	}
-	if TileGrass.BlocksVision() {
-		t.Errorf("Expected TileGrass to NOT block vision")
-	}
-	if TileTree.BlocksVision() {
-		t.Errorf("Expected TileTree to NOT block vision (or be transparent to raycast)")
+	for _, tile := range transparentTiles {
+		if tile.BlocksVision() {
+			t.Errorf("Expected tile %v (%s) to NOT block vision", tile, tile.String())
+		}
 	}
 
 	// Floor types
-	floorTiles := []TileType{TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor}
+	floorTiles := []TileType{TileGrass, TileDirt, TileWoodFloor, TileAsphalt, TileConcrete, TileTileFloor, TileRamp}
 	for _, tile := range floorTiles {
 		if !tile.IsFloor() {
-			t.Errorf("Expected tile %v to be floor", tile)
+			t.Errorf("Expected tile %v (%s) to be floor", tile, tile.String())
 		}
 	}
-	verticalTiles := []TileType{TileWall, TileTree, TileFence, TileDebris}
+	verticalTiles := []TileType{
+		TileWall, TileTree, TileFence, TileDebris, TileTent, TileElevationBlock, TileStump, TileMushroom, TileSign,
+		TileBench, TileChest, TileSculpture, TileBush, TileFlower, TileStone,
+	}
 	for _, tile := range verticalTiles {
 		if tile.IsFloor() {
-			t.Errorf("Expected tile %v to NOT be floor", tile)
+			t.Errorf("Expected tile %v (%s) to NOT be floor", tile, tile.String())
 		}
 	}
 
 	// String representations
-	for tile := TileGrass; tile <= TileDebris; tile++ {
+	for tile := TileGrass; tile <= TileStone; tile++ {
 		if tile.String() == "Unknown" {
 			t.Errorf("Expected known string for tile %d, got Unknown", tile)
+		}
+	}
+
+	expectedStrings := map[TileType]string{
+		TileBench:     "Bench",
+		TileChest:     "Chest",
+		TileSculpture: "Sculpture",
+		TileBush:      "Bush",
+		TileFlower:    "Flower",
+		TileStone:     "Stone",
+	}
+	for tile, exp := range expectedStrings {
+		if tile.String() != exp {
+			t.Errorf("Expected tile %d string to be %q, got %q", tile, exp, tile.String())
 		}
 	}
 }
@@ -292,3 +313,91 @@ func TestSmallFallbackMap(t *testing.T) {
 		t.Errorf("Fallback player spawn is on solid tile")
 	}
 }
+
+func TestNewMapProceduralPropsGeneration(t *testing.T) {
+	m := NewMap(100, 100)
+
+	newPropTiles := []TileType{
+		TileBench,
+		TileChest,
+		TileSculpture,
+		TileBush,
+		TileFlower,
+		TileStone,
+	}
+
+	counts := make(map[TileType]int)
+	for _, tile := range m.Tiles {
+		counts[tile]++
+	}
+
+	for _, pt := range newPropTiles {
+		count := counts[pt]
+		if count == 0 {
+			t.Errorf("Expected procedural map to generate new prop tile %v (%s), but got 0", pt, pt.String())
+		} else {
+			t.Logf("Generated prop %-12s (ID %d): count = %d", pt.String(), pt, count)
+		}
+	}
+}
+
+func TestCollisionAndFOVNewProps(t *testing.T) {
+	m := NewMap(40, 40)
+	for i := range m.Tiles {
+		m.Tiles[i] = TileGrass
+	}
+
+	// Place solid props
+	m.SetTile(5, 5, TileBench)
+	m.SetTile(7, 5, TileChest)
+	m.SetTile(9, 5, TileSculpture)
+	m.SetTile(11, 5, TileStone)
+
+	// Place non-solid props
+	m.SetTile(13, 5, TileBush)
+	m.SetTile(15, 5, TileFlower)
+
+	// Verify collision for solid props
+	solidPoints := []Point{{5, 5}, {7, 5}, {9, 5}, {11, 5}}
+	for _, p := range solidPoints {
+		px := float64(p.X * TileSize)
+		py := float64(p.Y * TileSize)
+		if !m.IsColliding(px+10, py+10, 16, 16) {
+			t.Errorf("Expected collision on solid prop %v at (%d,%d)", m.GetTile(p.X, p.Y), p.X, p.Y)
+		}
+	}
+
+	// Verify no collision for non-solid props
+	nonSolidPoints := []Point{{13, 5}, {15, 5}}
+	for _, p := range nonSolidPoints {
+		px := float64(p.X * TileSize)
+		py := float64(p.Y * TileSize)
+		if m.IsColliding(px+10, py+10, 16, 16) {
+			t.Errorf("Expected NO collision on non-solid prop %v at (%d,%d)", m.GetTile(p.X, p.Y), p.X, p.Y)
+		}
+	}
+
+	// Verify FOV penetration through all new props
+	playerX := 20.0*TileSize + 64.0
+	playerY := 20.0*TileSize + 64.0
+	m.SetTile(20, 15, TileBench)
+	m.SetTile(20, 25, TileSculpture)
+	m.SetTile(15, 20, TileChest)
+	m.SetTile(25, 20, TileStone)
+
+	m.CalculateFOV(playerX, playerY, 10)
+
+	// All props and the tiles behind them must be visible
+	behindCoords := []Point{
+		{20, 14}, // Behind bench
+		{20, 26}, // Behind sculpture
+		{14, 20}, // Behind chest
+		{26, 20}, // Behind stone
+	}
+	for _, bc := range behindCoords {
+		if !m.Visible[bc.Y*m.Width+bc.X] {
+			t.Errorf("Expected tile at (%d,%d) behind prop to be visible in FOV", bc.X, bc.Y)
+		}
+	}
+}
+

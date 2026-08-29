@@ -1,15 +1,14 @@
-# Progress: Asset Generation & Rendering Pipeline Survey
+# Progress — teamwork_preview_explorer_survey_1
 
-Last visited: 2026-08-28T18:49:50Z
-Status: Complete
+- Last visited: 2026-08-29T15:14:40Z
+- Status: Survey Complete
 
-## Tasks
-- [x] Initial setup (DISPATCH.md, BRIEFING.md, progress.md)
+## Checklist
 - [x] Read ORIGINAL_REQUEST.md
-- [x] Examine `cmd/tools/genassets/main.go` and all generators
-- [x] Identify geometric overlays and hardcoded vs calculated coordinates
-- [x] Inspect asset embedding (`internal/assets`) and sprite usage in `internal/game`
-- [x] Analyze 4x scaling (64x32 -> 256x128) implications across whole codebase
-- [x] Write comprehensive survey report (`survey_report.md`)
+- [x] Enumerate and analyze all files in `/context/` (590 total, 579 PNGs, 3 PSDs, 8 .DS_Store)
+- [x] Explore `cmd/tools/genassets` and search codebase for `genassets` references
+- [x] Explore `internal/assets/` (`assets.go`, `images/`, embedding, loading, existing `ebiten.Image` vars)
+- [x] Formulate exact file copying & code refactoring plan for R1 and R2
+- [x] Write comprehensive survey report (`survey.md`)
 - [x] Write 5-component handoff report (`handoff.md`)
 - [x] Send completion message to parent

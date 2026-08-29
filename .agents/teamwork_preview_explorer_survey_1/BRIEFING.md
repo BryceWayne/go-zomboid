@@ -1,35 +1,42 @@
-# BRIEFING — 2026-08-28T18:49:40Z
+# BRIEFING — 2026-08-29T15:14:40Z
 
 ## Mission
-Investigate the asset generation pipeline and sprite rendering systems, focusing on 4x scaling from 64x32 to 256x128 and procedural vector styling.
+Conduct an in-depth technical survey of the asset pipeline (context/ PNG files, genassets tool references, internal/assets/ embedding/loading architecture, and file copying/refactoring plan for R1 and R2).
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: investigator, synthesis
+- Roles: survey, investigation, synthesis
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1
-- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Milestone: Asset pipeline and rendering survey
+- Original parent: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Milestone: Asset Pipeline Survey & Migration Plan
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement
-- Produce survey report and handoff report
+- Read-only investigation — do NOT implement changes in source code (only write reports in own folder).
+- Thorough investigation of all context/ assets, genassets references, and internal/assets architecture.
 
 ## Current Parent
-- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Updated: 2026-08-28T18:49:40Z
+- Conversation ID: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Updated: 2026-08-29T15:14:40Z
 
 ## Investigation State
-- **Explored paths**: `ORIGINAL_REQUEST.md`, `ART_STYLE_GUIDE.md`, `PROJECT.md`, `cmd/tools/genassets/main.go`, `cmd/tools/genassets/genassets_test.go`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/assets_stress_test.go`, `internal/game/world/map.go`, `internal/game/world/map_test.go`, `internal/game/game.go`, `internal/game/game_test.go`, `internal/game/combat_test.go`
+- **Explored paths**:
+  - `/home/bryce/code/go-zomboid/context/` (All 590 files inspected and categorized)
+  - `/home/bryce/code/go-zomboid/cmd/tools/genassets/` (main.go, genassets_test.go, root binary)
+  - `/home/bryce/code/go-zomboid/internal/assets/` (assets.go, test suites, embed.FS mechanics)
+  - `/home/bryce/code/go-zomboid/internal/game/` & `internal/game/world/` (tile rendering and test assertions)
 - **Key findings**:
-  - Full catalog of all 20 procedural asset generators, mathematical formulas, and geometric overlays.
-  - Complete isometric projection equations (`WorldToIso`, `IsoToWorld`), sprite draw offsets, and camera tracking.
-  - Comprehensive 4x scaling blueprint (`TileSize = 128`, 256x128 floors, 256x256 obstacles, 64x128 entities, 64x64 items).
-  - Bezier curve attack dynamics formulation for combat arcs.
-- **Unexplored areas**: None. All survey questions answered in depth.
+  - 579 PNG files across Lab (1), Small Forest (45), and Zombie Apocalypse Tileset (533).
+  - 3 PSD files and 8 .DS_Store files to filter during ingestion.
+  - Deleting `cmd/tools/genassets` requires updating `TestEmpiricalGenerationDeterminism` in `internal/assets/empirical_challenger_test.go`.
+  - Go's `//go:embed images/*` recursively handles nested directories cleanly.
+- **Unexplored areas**: None (Survey 100% complete).
 
 ## Key Decisions Made
-- Completed detailed survey report in `survey_report.md` and 5-component hard handoff in `handoff.md`.
+- Formulated clean ingestion plan preserving hierarchical directory structure in `internal/assets/images/` with direct aliases for core gameplay props.
+- Documented complete catalog and R1/R2 refactoring plan in `survey.md` and `handoff.md`.
 
 ## Artifact Index
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/survey_report.md` — Comprehensive survey report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/survey.md` — Detailed technical survey report
 - `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/handoff.md` — 5-component handoff report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/progress.md` — Progress tracker
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_explorer_survey_1/DISPATCH.md` — Task dispatch log

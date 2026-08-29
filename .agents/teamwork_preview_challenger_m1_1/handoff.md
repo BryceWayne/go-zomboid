@@ -1,120 +1,87 @@
-# Handoff Report — Milestone 1 (Asset Pipeline 4x Scaling Empirical Challenge)
-
-**Reviewer**: `m1_challenger_1` (Empirical Challenger: Critic / Specialist)
-**Working Directory**: `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_1`
-**Verdict**: **FAIL**
-
----
+# Milestone 1 Adversarial Challenge Report & Validation Handoff
 
 ## 1. Observation
 
-1. **Test Execution Command & Failure Output**:
-   Command run: `CC=gcc go test -p 1 -v -count=1 ./internal/assets/... ./cmd/tools/genassets/...`
-   Verbatim output from `TestEmpiricalFloorDiamondGeometry`:
-   ```
-   === RUN   TestEmpiricalFloorDiamondGeometry
-   === RUN   TestEmpiricalFloorDiamondGeometry/images/grass.png
-   === RUN   TestEmpiricalFloorDiamondGeometry/images/dirt.png
-       empirical_challenger_test.go:226: Inner hole at (153, 30): RGBA=(0, 0, 0, 45) [isoDist=0.723]
-       empirical_challenger_test.go:226: Inner hole at (152, 31): RGBA=(0, 0, 0, 45) [isoDist=0.699]
-       empirical_challenger_test.go:226: Inner hole at (153, 31): RGBA=(0, 0, 0, 45) [isoDist=0.707]
-       empirical_challenger_test.go:226: Inner hole at (152, 32): RGBA=(0, 0, 0, 45) [isoDist=0.684]
-       empirical_challenger_test.go:226: Inner hole at (153, 32): RGBA=(0, 0, 0, 45) [isoDist=0.691]
-       empirical_challenger_test.go:235: images/dirt.png has 18 non-transparent pixels outside isometric diamond (isoDist > 1.0)
-       empirical_challenger_test.go:242: images/dirt.png has 151 transparent/semi-transparent pixels inside solid core (isoDist <= 0.85)
-   --- FAIL: TestEmpiricalFloorDiamondGeometry (0.00s)
-       --- PASS: TestEmpiricalFloorDiamondGeometry/images/grass.png (0.00s)
-       --- FAIL: TestEmpiricalFloorDiamondGeometry/images/dirt.png (0.00s)
-       --- PASS: TestEmpiricalFloorDiamondGeometry/images/wood.png (0.00s)
-       --- PASS: TestEmpiricalFloorDiamondGeometry/images/asphalt.png (0.00s)
-       --- PASS: TestEmpiricalFloorDiamondGeometry/images/concrete.png (0.00s)
-       --- PASS: TestEmpiricalFloorDiamondGeometry/images/tile_floor.png (0.00s)
-   FAIL
-   FAIL	github.com/BryceWayne/go-zomboid/internal/assets	0.032s
-   ```
+1. **R1 Procedural Pipeline Retirement**:
+   - Directory `/home/bryce/code/go-zomboid/cmd/tools/genassets` does not exist on disk (`ls cmd/tools/genassets` -> `No such file or directory`).
+   - Root binary `/home/bryce/code/go-zomboid/genassets` does not exist on disk.
+   - Command `go run ./cmd/tools/genassets` fails empirically with:
+     `stat /home/bryce/code/go-zomboid/cmd/tools/genassets: directory not found` (exit status 1).
 
-2. **Source Code Implementation in `cmd/tools/genassets/main.go`**:
-   - Lines 250–265:
-     ```go
-     func drawVectorPebble(img *image.RGBA, cx, cy int, rx, ry float64, base, light, shadow color.RGBA) {
-         dropShadow := color.RGBA{0, 0, 0, 45}
-         // Drop shadow
-         minY := int(math.Floor(float64(cy+2) - ry))
-         maxY := int(math.Ceil(float64(cy+2) + ry))
-         minX := int(math.Floor(float64(cx+2) - rx))
-         maxX := int(math.Ceil(float64(cx+2) + rx))
-         for y := minY; y <= maxY; y++ {
-             for x := minX; x <= maxX; x++ {
-                 dx := float64(x-(cx+2)) / rx
-                 dy := float64(y-(cy+2)) / ry
-                 if dx*dx+dy*dy <= 1.0 {
-                     setPixel(img, x, y, dropShadow)
-                 }
-             }
-         }
+2. **R2 External Asset Ingestion & Embedded FS Defect (CRITICAL)**:
+   - On disk, `context/` contains 579 PNG files (590 total files including 8 `.DS_Store` and 3 `.psd`).
+   - On disk, `internal/assets/images/` contains 606 PNG files (27 legacy + 579 external) and 0 non-PNG files.
+   - **However, Go's `//go:embed images/*` filesystem (`imageFS`) only embeds 603 PNG files (27 legacy + 576 external), omitting 3 external PNG files:**
+     - `images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0106_Capa-107.png`
+     - `images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0107_Capa-108.png`
+     - `images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0108_Capa-109.png`
+   - Attempting to read these 3 files from `imageFS` fails with:
+     `open images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0106_Capa-107.png: file does not exist`
+   - Root cause in Go compiler (`cmd/go/internal/load/pkg.go:2229-2245`):
+     Go embed's directory walker calls `isBadEmbedName()`, which invokes `module.CheckFilePath()`. Because `90┬║ Rotatable Bridge Sprites` contains Unicode box-drawing characters `┬` (U+252C) and `║` (U+2551) from an un-sanitized CP437/DOS zip extraction of `90° Rotatable Bridge Sprites`, `module.CheckFilePath()` rejects the directory name and Go silently returns `fs.SkipDir`, skipping embedding for all files in that folder.
+
+3. **R2 Pointer Non-Nil Integrity & Dimensions**:
+   - `assets.Load()` successfully initializes all 22 new exported `*ebiten.Image` pointers:
+     - `BenchImage` (52x37), `ChestImage` (22x21), `Sculpture1Image` (23x31), `Sculpture2Image` (29x32), `SculptureImage` (23x31)
+     - `Bush1Image` (24x18), `Bush2Image` (19x15), `Bush3Image` (25x19), `Bush4Image` (28x19), `BushImage` (24x18)
+     - `Flower1Image` (26x25), `Flower2Image` (24x22), `Flower3Image` (26x18), `FlowerImage` (26x25)
+     - `Stone1Image` (28x19), `Stone2Image` (29x25), `StoneImage` (28x19), `ForestStumpImage` (29x19)
+     - `GrassTuft1Image` (25x24), `GrassTuft2Image` (31x15)
+     - `LabTilesetImage` (768x768), `ZombieTilesetImage` (764x300)
+   - All 27 legacy pointers (`PlayerImage`, `GrassImage`, `WallImage`, `WeaponImage`, etc.) remain non-nil with exact dimensions.
+
+4. **Concurrency & Idempotency**:
+   - Concurrency stress test (`TestEmpiricalM1_ConcurrentLoadIdempotencyStress`) executed 100 concurrent goroutines invoking `assets.Load()` simultaneously across 50 iterations with 0 data races, 0 nil pointers, and 0 panics.
+
+5. **Test Suite Execution**:
+   - `CC=gcc go test ./internal/assets/...` fails with:
      ```
-   - Lines 666–671:
-     ```go
-     // 4x Scaled rounded vector pebbles (~14x8px)
-     pebbles := [][2]int{
-         {80, 40}, {180, 56}, {120, 88}, {60, 80}, {195, 36}, {145, 30},
-     }
-     for _, pos := range pebbles {
-         drawVectorPebble(img, pos[0], pos[1], 7.0, 4.0, pebbleBase, pebbleLight, pebbleShadow)
-     }
+     --- FAIL: TestEmpiricalM1_All579ContextPNGsMatchImages (0.03s)
+         --- FAIL: TestEmpiricalM1_All579ContextPNGsMatchImages/Zombie_Apocalypse_Tileset/Organized_separated_sprites/90┬║_Rotatable_Bridge_Sprites/Zombie-Tileset---_0106_Capa-107.png (0.00s)
+             m1_adversarial_challenger_test.go:58: missing embedded PNG in imageFS: images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0106_Capa-107.png: open images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/Zombie-Tileset---_0106_Capa-107.png: file does not exist
+     --- FAIL: TestEmpiricalM1_EmbeddedFSStructureAndCount (0.00s)
+         m1_adversarial_challenger_test.go:127: expected exactly 606 embedded PNGs (27 legacy + 579 external), found 603 (disk has 606)
      ```
-
-3. **Asset Dimensions and Determinism Measurements**:
-   - All 27 assets in `internal/assets/images/*.png` match required dimensions:
-     - 6 Floors: 256x128
-     - 10 Obstacles/Props: 256x256
-     - 3 Entities: 64x128
-     - 8 Items: 64x64
-   - Character entities possess solid grounding pixels in rows 112..127 (`player.png`: 559 px / 272 solid; `zombie.png`: 525 px / 238 solid; `runner.png`: 615 px / 276 solid).
-   - Asset regeneration is 100% deterministic (identical SHA-256 hashes across consecutive runs of `cmd/tools/genassets`).
-
----
 
 ## 2. Logic Chain
 
-1. From Observation 2 (lines 250–265), `drawVectorPebble` defines `dropShadow` as `color.RGBA{0, 0, 0, 45}` and calls `setPixel(img, x, y, dropShadow)`.
-2. `setPixel` performs a direct unblended assignment `img.SetRGBA(x, y, c)`. When applied to the dirt tile base, it replaces the fully opaque ground color `(151, 103, 81, 255)` with `(0, 0, 0, 45)`.
-3. Because the pebble body (`normDist <= 1.0` centered at `(cx, cy)`) is offset by `(-2, -2)` from the shadow (`(cx+2, cy+2)`), unoccluded shadow pixels are not painted over by the opaque pebble body.
-4. From Observation 1, this directly results in **151 pixels with alpha = 45** inside the solid diamond core of `images/dirt.png`, punching translucent holes in the ground sprite.
-5. From Observation 2 (lines 666–671), pebble 5 is placed at `cx = 195, cy = 36` with radii $r_x = 7.0, r_y = 4.0$. At $x = 202, y = 36$, the normalized distance is $\frac{|202 - 127.5|}{128} + \frac{|36 - 63.5|}{64} = 0.5820 + 0.4297 = 1.0117 > 1.0$.
-6. Because `drawVectorPebble` lacks diamond boundary clipping, this directly causes **18 non-transparent pixels to bleed outside the 2:1 isometric diamond boundary** into the transparent upper-right corner.
-7. Consequently, `images/dirt.png` fails floor tile geometric and alpha integrity contracts, leading to verdict **FAIL**.
-
----
+1. Requirement R2 dictates ingesting all external PNG assets from `context/` into `internal/assets/images/` such that the game can natively load these assets.
+2. The runtime asset loader relies on Go's `//go:embed images/*` directive to access all embedded PNG files via `imageFS`.
+3. Observation #2 reveals that although 579 files were copied to disk, Go's embed toolchain rejects the directory name `90┬║ Rotatable Bridge Sprites` due to invalid box-drawing characters `┬` and `║` under `module.CheckFilePath()`.
+4. As a direct result, 3 PNG files are silently excluded from `imageFS`, causing runtime `ReadFile` failures and leaving only 576 out of 579 external PNGs accessible in the binary.
+5. While R1 (retirement of genassets), pointer initialization, and concurrency are fully compliant, the asset embedding pipeline fails Requirement 1 of the milestone ("Verify all 579 PNG files from context/ exist and are valid readable PNGs in internal/assets/images/").
+6. Therefore, Milestone 1 must be REJECTED until the worker sanitizes the directory name to a valid path (e.g. `90 Rotatable Bridge Sprites` or `90_Rotatable_Bridge_Sprites` or `90-deg Rotatable Bridge Sprites` in both `context/` and `internal/assets/images/` or in `internal/assets/images/`).
 
 ## 3. Caveats
 
-- Milestone 1 verification focuses strictly on asset generation (`cmd/tools/genassets`), embedded assets (`internal/assets`), and image mathematical geometry. Subsequent milestones (M2 engine coordinate math and M3 Bezier combat curves) were not evaluated in this handoff.
-- The existing test `TestFloorTileIsometricBounds` in `internal/assets/assets_stress_test.go` did not catch the pebble bleed because its tolerance was set too loosely (`dist > 1.15`).
-
----
+- All 22 new pointers needed for Milestone 2 (`world/map.go`) and Milestone 3 (`game.go`) are fully loaded and operational; the 3 omitted files belong to bridge sprites in the Zombie Apocalypse Tileset pack, which are not currently referenced in `assets.go`'s top-level variables but violate the contract of complete asset ingestion.
+- The 27 legacy assets are completely unaffected and 100% operational.
 
 ## 4. Conclusion
 
-Milestone 1 is **FAILED** due to two reproducible defects in `cmd/tools/genassets/main.go` affecting `images/dirt.png`:
-1. `drawVectorPebble` calling `setPixel` with semi-transparent `dropShadow` instead of `blendPixel`, creating 151 alpha=45 holes.
-2. Pebble `{195, 36}` causing 18 pixels to bleed across the isometric diamond boundary ($isoDist > 1.0$).
+**Milestone 1 Empirical Confirmation Verdict**: **REJECT**
 
-**Action Required from Implementer**:
-1. In `cmd/tools/genassets/main.go:262`, change `setPixel(img, x, y, dropShadow)` to `blendPixel(img, x, y, dropShadow)`.
-2. In `cmd/tools/genassets/main.go:667`, adjust the pebble coordinate `{195, 36}` inward (e.g. `{185, 42}`) or enforce $isoDist \le 0.92$ clipping.
-3. Re-run `go run ./cmd/tools/genassets` to regenerate the sprite files.
-
----
+### Actionable Fix for Worker:
+1. Rename the directory `internal/assets/images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites` to a valid ASCII/UTF-8 path without box-drawing runes (e.g. `90 Rotatable Bridge Sprites` or `90_Rotatable_Bridge_Sprites` or `90-deg Rotatable Bridge Sprites`).
+2. (Optional / recommended) Update `context/Zombie Apocalypse Tileset/Organized separated sprites/` directory similarly to keep 100% path parity with `context/`.
+3. Re-run `CC=gcc go test -v ./internal/assets/...` and verify all 606 embedded files pass.
 
 ## 5. Verification Method
 
-To independently reproduce the failure and verify fixes:
-```bash
-# 1. Run the empirical challenger test suite
-CC=gcc go test -p 1 -v -count=1 -run TestEmpiricalFloorDiamondGeometry ./internal/assets/...
+To independently reproduce the failure and verify after fix:
 
-# 2. Run the full project test suite
-CC=gcc go test -p 1 ./...
+```bash
+# 1. Run the empirical adversarial test suite
+CC=gcc go test -v -run "TestEmpiricalM1" ./internal/assets/...
+
+# 2. Inspect the exact missing embedded files
+python3 -c "
+import subprocess, json
+d = json.loads(subprocess.run(['go', 'list', '-json', './internal/assets'], capture_output=True, text=True).stdout)
+print('Embedded count:', len(d.get('EmbedFiles', [])))
+print('Rotatable files in EmbedFiles:', [f for f in d.get('EmbedFiles', []) if 'Rotatable' in f])
+"
+
+# 3. Full package test
+CC=gcc go test -v ./internal/assets/...
 ```
-Expected invalidation condition for this FAIL verdict: When the above commands exit with code 0 and `TestEmpiricalFloorDiamondGeometry/images/dirt.png` passes with 0 bleeding pixels and 0 punctured alpha pixels.

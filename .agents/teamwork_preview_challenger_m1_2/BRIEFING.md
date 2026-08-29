@@ -1,51 +1,48 @@
-# BRIEFING — 2026-08-28T18:59:45Z
+# BRIEFING — 2026-08-29T15:20:00Z
 
 ## Mission
-Empirically stress-test Milestone 1 asset generation pipeline and image validity in BryceWayne/go-zomboid.
+Perform empirical adversarial challenge, boundary verification, and stress testing for Milestone 1 (Asset Pipeline Migration & Image Verification).
 
 ## 🔒 My Identity
-- Archetype: EMPIRICAL CHALLENGER
+- Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2
-- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
+- Original parent: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
 - Milestone: Milestone 1
-- Instance: 2 of 2
+- Instance: 1 of 1
 
 ## 🔒 Key Constraints
-- Review-only — do NOT modify implementation code.
-- Write tests and empirical harnesses to verify or falsify claims; all tests must be executed directly.
+- Review-only / challenger verification: write tests/generators/stress harnesses in workspace or run tests, verify empirical results.
 - .agents/ holds only agent metadata.
 
 ## Current Parent
-- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Updated: 2026-08-28T18:59:45Z
+- Conversation ID: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Updated: 2026-08-29T15:20:00Z
 
 ## Review Scope
-- **Files to review**: `internal/assets/*`, `cmd/tools/genassets/*`, `PROJECT.md`, `ORIGINAL_REQUEST.md`
-- **Interface contracts**: PROJECT.md Milestone 1 requirements (27 exported image pointers, bounds, asset generation, concurrency)
-- **Review criteria**: Correctness, concurrency safety, bounds integrity, visual contrast/saturation, test reproducibility
-
-## Key Decisions Made
-- Executed empirical test suites with `-race` and statistical image analysis.
-- Found 2 bugs: `dirt.png` alpha hole corruption / boundary bleed and data race on `assets.Load()`.
-- Issued verdict: FAIL.
-
-## Artifact Index
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2/challenge_report.md` — Final challenge report
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2/handoff.md` — Self-contained handoff report
-- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_challenger_m1_2/progress.md` — Liveness and execution progress
-- `/home/bryce/code/go-zomboid/internal/assets/challenger_stress_test.go` — Empirical stress test suite
+- **Files to review**: `internal/assets/images/*`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, worker handoff `/home/bryce/code/go-zomboid/.agents/teamwork_preview_worker_m1/handoff.md`
+- **Interface contracts**: `/home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md`, `/home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_5/PROJECT.md`
+- **Review criteria**: Asset integrity (dimensions, alpha channels, no unwanted files/zone identifiers), all 27 legacy pointers + new pointers accessible, full test suite pass.
 
 ## Attack Surface
-- **Hypotheses tested**:
-  - Concurrent `Load()` calls may cause race conditions or nil pointers. (CONFIRMED: Data race detected on global pointers under `-race`)
-  - Image bounds might not match expected tile specs. (REFUTED: All 27 match exact dimensions)
-  - Pixel generation might produce transparent holes or diamond boundary bleed. (CONFIRMED: `dirt.png` has 151 core semi-transparent holes and 18 bleed pixels)
-  - `genassets` tool idempotency and determinism. (CONFIRMED: Byte-for-byte deterministic)
+- **Hypotheses tested**: 
+  - All external assets adhere to valid PNG specifications, dimensions, non-zero alpha bounds. (CONFIRMED: all 579 files valid PNGs, 0 corrupted, 0 fully transparent).
+  - No unwanted OS artifacts (.DS_Store, .psd, Zone.Identifier, Thumbs.db) in `internal/assets/images/`. (CONFIRMED: 0 unwanted files present).
+  - All 27 legacy image variables and 22 new image variables resolve to non-nil `*ebiten.Image` without panic or decode failure. (CONFIRMED).
+  - All 579 external PNG assets from `context/` are embedded and accessible via Go `embed.FS`. (DISPROVEN / FAILED: Go's `//go:embed` skips `90┬║ Rotatable Bridge Sprites` due to `module.CheckFilePath()` path restrictions on non-ASCII characters).
 - **Vulnerabilities found**:
-  - `cmd/tools/genassets/main.go:251-265`: `drawVectorPebble()` uses `setPixel` with semi-transparent drop shadow, overwriting opaque pixels with alpha 45 and bleeding outside diamond.
-  - `internal/assets/assets.go:53-88`: `Load()` lacks `sync.Once`, causing data races on multi-threaded execution.
-- **Untested angles**: None for Milestone 1 asset scope.
+  - `internal/assets/images/Zombie Apocalypse Tileset/Organized separated sprites/90┬║ Rotatable Bridge Sprites/` contains 3 PNGs that fail to embed into `imageFS`.
+- **Untested angles**:
+  - Game world tile placement logic (Milestone 2 scope).
 
 ## Loaded Skills
-- None specified by orchestrator.
+- None specified.
+
+## Key Decisions Made
+- Verdict: REJECT Milestone 1 due to 3 missing embedded files and test failure.
+
+## Artifact Index
+- DISPATCH.md — Dispatch logs
+- BRIEFING.md — Situational awareness
+- progress.md — Liveness heartbeat and progress log
+- handoff.md — Verification report & challenge verdict

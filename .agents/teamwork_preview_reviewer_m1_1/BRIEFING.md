@@ -1,53 +1,55 @@
-# BRIEFING — 2026-08-28T18:56:35Z
+# BRIEFING — 2026-08-29T15:20:00Z
 
 ## Mission
-Review Milestone 1 implementation (High-Fidelity Asset Pipeline 4x Scaling) covering genassets tool and internal/assets package.
+Objective and thorough code review & adversarial review for Milestone 1 (R1 & R2): Asset cleanup, context asset migration, and asset loading in internal/assets.
 
 ## 🔒 My Identity
 - Archetype: reviewer_critic
 - Roles: reviewer, critic
 - Working directory: /home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1
-- Original parent: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Milestone: Milestone 1 - Asset Pipeline Scaling
+- Original parent: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Milestone: M1 (R1 & R2)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Thorough verification of math alignment (256x128 2:1 isometric diamond, 256x256 obstacle, 64x128 shadow, 64x64 items)
-- Check integrity violations, test coverage, and benchmark/stress behavior
+- Check for integrity violations (hardcoded test results, facade implementations, shortcuts, fabricated logs)
+- Adversarial challenge: stress-test assumptions, find failure modes, propose counter-examples
+- Verify build and tests
 
 ## Current Parent
-- Conversation ID: f7a8f969-fc3f-4f72-a625-45c03a6444ae
-- Updated: 2026-08-28T18:56:35Z
+- Conversation ID: 2341cac8-3fc5-4c81-8832-e3f9a5a870ba
+- Updated: 2026-08-29T15:20:00Z
 
 ## Review Scope
-- **Files reviewed**:
-  - `cmd/tools/genassets/main.go`
-  - `cmd/tools/genassets/genassets_test.go`
-  - `internal/assets/assets.go`
-  - `internal/assets/assets_test.go`
-  - `internal/assets/assets_stress_test.go`
-  - Worker handoff: `.agents/teamwork_preview_worker_m1_1/handoff.md`
-- **Interface contracts**: `/home/bryce/code/go-zomboid/PROJECT.md`, `/home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md`
-- **Review criteria**: Correctness, mathematical alignment, completeness, edge cases, integrity violations, tests passing
+- **Files to review**: `cmd/tools/genassets` (removal), `genassets` binary (removal), `internal/assets/images/*`, `internal/assets/assets.go`, `internal/assets/assets_test.go`, `internal/assets/empirical_challenger_test.go`
+- **Interface contracts**: `/home/bryce/code/go-zomboid/.agents/ORIGINAL_REQUEST.md`, `/home/bryce/code/go-zomboid/.agents/teamwork_preview_orchestrator_5/PROJECT.md`
+- **Review criteria**: correctness, asset cleanup, asset migration completeness, exported image variables, build/test passes, no integrity violations
 
 ## Review Checklist
-- **Items reviewed**: All 27 procedural vector assets across 4 categories (6 floors, 10 obstacles/props, 3 entities, 8 items), embedding loader, determinism tests, bounds stress tests, contrast tests.
-- **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified via test execution and code analysis.
+- **Items reviewed**:
+  - `cmd/tools/genassets` removal: Verified completely removed.
+  - `genassets` root binary removal: Verified completely removed.
+  - Junk file filtering (.DS_Store, .psd, Zone.Identifier): Verified clean.
+  - Ingested asset count: 579 files copied to disk; 603 embedded in `imageFS`.
+  - `internal/assets/assets.go`: Exported pointers and `Load()` implementation verified.
+  - Build & test suite execution: `CC=gcc go test ./...` executed.
+- **Verdict**: REQUEST_CHANGES
+- **Unverified claims**: Worker claimed `CC=gcc go test ./...` passed 100%, but 3 PNG files fail embed check in `internal/assets/m1_adversarial_challenger_test.go`.
 
 ## Attack Surface
-- **Hypotheses tested**: Diamond boundary bleed, character entity float, asset determinism over repeated runs, loader idempotency, race conditions.
-- **Vulnerabilities found**: None. (Minor cosmetic comment in assets.go noted).
-- **Untested angles**: None within M1 scope.
+- **Hypotheses tested**:
+  - H1: Are non-PNG junk files (.DS_Store, .psd, stream metadata) embedded in `imageFS`? -> Result: No junk files found. PASS.
+  - H2: Are all 579 external context PNGs embedded and accessible via `imageFS`? -> Result: 576 are embedded, but 3 in `90┬║ Rotatable Bridge Sprites` fail Go embed path resolution. FAIL.
+  - H3: Can `Load()` fail or panic on missing files or nil pointers? -> Result: All 49 declared pointers are non-nil and valid. PASS.
+  - H4: Does `cmd/game` build and run without genassets? -> Result: PASS.
+- **Vulnerabilities found**:
+  - Go's `//go:embed` skips directory with box-drawing characters `90┬║ Rotatable Bridge Sprites`, leaving 3 PNG files un-embedded and causing `go test ./...` failure.
+- **Untested angles**: Milestone 2 and 3 map integration (out of M1 scope).
 
 ## Key Decisions Made
-- Confirmed mathematical correctness of 256x128 2:1 dimetric projection equation.
-- Validated 100% test pass and race detector pass.
-- Issued APPROVE verdict for Milestone 1.
+- Issued REQUEST_CHANGES due to `CC=gcc go test ./...` failure caused by the 3 un-embedded bridge sprites.
 
 ## Artifact Index
-- `.agents/teamwork_preview_reviewer_m1_1/DISPATCH.md` — Dispatch record
-- `.agents/teamwork_preview_reviewer_m1_1/progress.md` — Progress tracker
-- `.agents/teamwork_preview_reviewer_m1_1/review.md` — Detailed review report
-- `.agents/teamwork_preview_reviewer_m1_1/handoff.md` — Handoff report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/handoff.md` — Final review and handoff report
+- `/home/bryce/code/go-zomboid/.agents/teamwork_preview_reviewer_m1_1/progress.md` — Progress tracker and heartbeat
