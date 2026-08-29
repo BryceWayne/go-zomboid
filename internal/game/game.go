@@ -777,11 +777,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 									if inCone && s.gameMap.IsDestructible(tx, ty) {
 										destroyed, dropType := s.gameMap.DamageTile(tx, ty, 2)
 										if destroyed && dropType != "" {
-											itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](s.world)
-											itemMap.NewEntity(
-												&ecs.Item{Type: dropType},
-												&ecs.Position{X: tileCenterX, Y: tileCenterY},
-											)
+											drops = append(drops, pendingDrop{DropType: dropType, X: tileCenterX, Y: tileCenterY})
 										}
 									}
 								}
@@ -856,11 +852,7 @@ func (s *UpdateSystem) processInputAndCombat(draggingSlot int) {
 									destroyed, dropType := s.gameMap.DamageTile(tx, ty, 2)
 									hitBarrier = true
 									if destroyed && dropType != "" {
-										itemMap := arkecs.NewMap2[ecs.Item, ecs.Position](s.world)
-										itemMap.NewEntity(
-											&ecs.Item{Type: dropType},
-											&ecs.Position{X: tileCenterX, Y: tileCenterY},
-										)
+										drops = append(drops, pendingDrop{DropType: dropType, X: tileCenterX, Y: tileCenterY})
 									}
 								}
 							}
